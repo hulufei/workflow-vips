@@ -1,0 +1,12 @@
+{
+	"name": "grunt-test",
+	"description": "Test grunt workflow",
+	"branches": {
+		"tpl": {"branches/tpl-mix": "branches/tpl-mix-test"},
+		"static": {
+			"branches/static-te":    "branches/static-te-test",
+			"branches/static-club":  "branches/static-club-test",
+			"branches/static-mix":   "branches/static-mix-test"
+		}
+	}
+}
