@@ -374,7 +374,9 @@ module.exports = function(grunt) {
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
 		var project = grunt.file.readJSON('test/project.json');
+		var build = grunt.file.readJSON('test/build.json');
 		grunt.config('project', project);
+		grunt.config('build', build);
 		var branches = preprocess('project');
 		grunt.config('clean.test', branches.getAll('test'));
 	});
