@@ -369,7 +369,7 @@ module.exports = function(grunt) {
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
-	grunt.registerTask('test', ['test_setup', 'updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'nodeunit', 'clean:test']);
+	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'nodeunit', 'clean:test']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
