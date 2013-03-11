@@ -23,16 +23,19 @@ module.exports = function(grunt) {
 				'static': []
 			},
 			getAll: function (name) { 
-				var arr = [],
-						branch = this[name];
-				for (var k in branch) {
-					arr = arr.concat(branch[k]);
-				}
+				var arr = [], branches, that = this;
+				branches = name ? [name] : ['dev', 'test'];
+				branches.forEach(function (branch) {
+					var bs = that[branch];
+					for (var k in bs) {
+						arr = arr.concat(bs[k]);
+					}
+				});
 				return arr;
 			},
 			isEmpty: function () {
-				return !this.getAll('dev').concat(this.getAll('test')).length;
-			}
+				return !this.getAll().length;
+			},
 		},
 		// 保存输出信息
 		_output: {
@@ -74,8 +77,14 @@ module.exports = function(grunt) {
 				},
 				src: 'Gruntfile.js'
 			},
-			lib_test: {
-				src: ['lib/**/*.js', 'test/**/*.js']
+			test: {
+				options: {
+					browser: false,
+					globals: false,
+					node: true,
+					es5: true
+				},
+				src: ['test/**/*.js']
 			}
 		},
 		watch: {
@@ -83,9 +92,13 @@ module.exports = function(grunt) {
 				files: '<%= jshint.gruntfile.src %>',
 				tasks: ['jshint:gruntfile']
 			},
+			test: {
+				files: '<%= jshint.test.src %>',
+				tasks: ['jshint:test', 'nodeunit']
+			},
 			dev: {
 				files: ['vipstatic'],
-				tasks: ['build:dev']
+				tasks: ['build']
 			}
 		},
 		copy: {
@@ -212,13 +225,8 @@ module.exports = function(grunt) {
 				}
 			}
 		},
-		build: {
-			dev: {
-				local: true
-			},
-			stage: {
-				local: false
-			}
+		nodeunit: {
+			tests: ['test/*_test.js']
 		},
 
 		// TODO
@@ -233,9 +241,10 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-imagemin');
+	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-shell');
 	//grunt.loadNpmTasks('grunt-contrib-concat');
-	//grunt.loadNpmTasks('grunt-contrib-nodeunit');
+	grunt.loadNpmTasks('grunt-contrib-nodeunit');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	// load all grunt tasks
@@ -311,7 +320,7 @@ module.exports = function(grunt) {
 	function preprocess(project) {
 		project = project ? grunt.config(project) : grunt.config('project');
 		// 检查配置
-		['name', 'description', 'branches'].map(function (name) {
+		['name', 'branches'].map(function (name) {
 			if (!project.hasOwnProperty(name)) {
 				grunt.log.error(project);
 				grunt.fatal('缺失配置：' + name);
@@ -320,15 +329,29 @@ module.exports = function(grunt) {
 		if (project.name.trim() === '') {
 			grunt.fatal('请指定要构建的项目名');
 		}
-		// 保存所有相关的分支名
+
+		// join branches
 		var path = require('path');
+		var joined_branches = {},
+				base = project.branches['base'];
+		if (base) {
+			['static', 'tpl'].forEach(function (k) {
+				var bs = project.branches[k];
+				joined_branches[k] = joined_branches[k] || {};
+				for (var dev in bs) {
+					joined_branches[k][path.join(base, dev)] = path.join(base, bs[dev]);
+				}
+			});
+			project.branches = joined_branches;
+		}
+
+		// 保存所有相关的分支名
 		var branches = grunt.config('_branches'),
 				branch_src = '',
-				base = project.branches['base'] || '',
 				static_branches = project.branches['static'] || {},
 				tpl_branches = project.branches['tpl'] || {};
 		for (branch_src in static_branches) {
-			branches.dev.static.push(path.join(base, branch_src));
+			branches.dev.static.push(branch_src);
 			branches.test.static.push(static_branches[branch_src]);
 		}
 		for (branch_src in tpl_branches) {
@@ -341,14 +364,23 @@ module.exports = function(grunt) {
 		return branches;
 	}
 
-	// Default task.
-	// grunt.registerTask('default', ['jshint', 'qunit', 'concat', 'uglify']);
-	grunt.registerTask('publish', ['build:stage', 'push', 'finish']);
-	grunt.registerTask('taste', ['build:dev', 'finish']);
+	// 发布提交
+	grunt.registerTask('publish', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'push', 'finish']);
+	// 不依赖网络，可供预览更改
+	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
+	// 测试流程
+	grunt.registerTask('test', ['test_setup', 'updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'nodeunit', 'clean:test']);
+
+	// set for testing the workflow
+	grunt.registerTask('test_setup', function () {
+		var project = grunt.file.readJSON('test/project.json');
+		grunt.config('project', project);
+		var branches = preprocess('project');
+		grunt.config('clean.test', branches.getAll('test'));
+	});
 
 	// build task
-	grunt.registerMultiTask('build', function() {
-		var options = this.data;
+	grunt.registerTask('build', function() {
 		var branches = grunt.config('_branches');
 		branches = branches.isEmpty() ? preprocess('project') : branches;
 
@@ -357,14 +389,6 @@ module.exports = function(grunt) {
 				tpl_branches = project.branches['tpl'] || {},
 				branch_src = '',
 				branch_dest = '';
-
-		// 先更新dev分支，提前发现冲突
-		branches.getAll('dev').map(function (branch) {
-			if (!options.local) {
-				grunt.task.run('update:' + branch);
-			}
-			grunt.task.run('st:' + branch);
-		});
 
 		// 对应静态资源分支的处理
 		for (branch_src in static_branches) {
@@ -376,8 +400,6 @@ module.exports = function(grunt) {
 			}); 
 			// 同步静态目录中非jpg，png等其他资源
 			grunt.task.run('cp:' + branch_src + ':' + branch_dest);
-			// 清理imagemin生成的.bak文件
-			grunt.task.run('cleanPng:' + branch_dest);
 		}
 
 		// 对应模板页面分支的处理
@@ -386,11 +408,6 @@ module.exports = function(grunt) {
 			// 同步模板页
 			grunt.task.run('cp:' + tpl_src + ':' + tpl_dest);
 		}
-
-		// 生成一个所有分支文件更改状态的列表, 检查遗漏
-		branches.getAll('test').map(function (branch) {
-			grunt.task.run('st:' + branch);
-		});
 	});
 
 	// TODO: 建立watch任务，对应分支做jshint，csslint等等
@@ -445,18 +462,6 @@ module.exports = function(grunt) {
 		this.filesSrc.forEach(process);
 	});
 
-	// 清理imagemin生成的bak文件
-	grunt.registerTask('cleanPng', function (branch) {
-		grunt.config('branch_dest', branch);
-		var dest = grunt.config('imagemin.vips.dest');
-		grunt.file.recurse(dest, function (abspath) {
-			if (grunt.file.isMatch({matchBase: true}, '*.png.bak', abspath)) {
-				grunt.file['delete'](abspath);
-				grunt.log.debug(abspath + ' Deleted!');
-			}
-		});
-	});
-
 	// task wrapper，keep config values per task.
 	grunt.registerTask('apply', function (task, branch_src, branch_dest) {
 		grunt.config('branch_src', branch_src);
@@ -469,7 +474,7 @@ module.exports = function(grunt) {
 		if (grunt.option('all')) {
 			grunt.task.run(task);
 		}
-		else if(st.X || st.M) {
+		else if(st && (st.X || st.M)) {
 			// Only process the changed or the new files
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
@@ -511,7 +516,7 @@ module.exports = function(grunt) {
 
 	// Commit all test branches
 	grunt.registerTask('push', function () {
-		grunt.task.requires('build:stage');
+		grunt.task.requires('build');
 		var project = grunt.config('_project');
 		var branches = grunt.config('_branches');
 		if (!project) {
@@ -521,6 +526,24 @@ module.exports = function(grunt) {
 		ChangeLog.project = project;
 		branches.getAll('test').map(function (branch) {
 			grunt.task.run('commit:' + branch);
+		});
+	});
+
+	// Update all specified branches(dev/test)
+	grunt.registerTask('updateall', function (name) {
+		var branches = grunt.config('_branches');
+		branches = branches.isEmpty() ? preprocess('project') : branches;
+		branches.getAll(name).map(function (branch) {
+			grunt.task.run('update:' + branch);
+		});
+	});
+
+	// Log file status of specified branches(dev/test)
+	grunt.registerTask('statuslog', function (name) {
+		var branches = grunt.config('_branches');
+		branches = branches.isEmpty() ? preprocess('project') : branches;
+		branches.getAll(name).map(function (branch) {
+			grunt.task.run('st:' + branch);
 		});
 	});
 
@@ -559,7 +582,7 @@ module.exports = function(grunt) {
 			grunt.log.writeln(grunt.file.read(changelog));
 		}
 		else {
-			grunt.log.warn(changelog + ' not found! You may run build first.');
+			grunt.log.warn(changelog + ' not found! You may run push first.');
 		}
 
 		var st_data = grunt.config('_output.st');

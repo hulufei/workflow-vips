@@ -1,0 +1,11 @@
+{
+	"name": "test",
+	"description": "unit tests",
+	"branches": {
+		"base": "test/test-branches",
+		"tpl": {"tpl-a": "tpl-a-test"},
+		"static": {
+			"static-a": "static-a-test"
+		}
+	}
+}

@@ -1,0 +1,24 @@
+.shopImgVer{
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$shopImgVer});
+}
+.staticVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$staticVer});
+}
+.dayImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$dayImgVer});
+}
+.luxImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$luxImgVer});
+}
+.tourImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$tourImgVer});
+}
+.goodsImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$goodsImgVer});
+}
+.mallImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$mallImgVer});
+}
+.cardImgVer {
+  background-image:url({$imgDomain}/te/comm_imgs.png?{$cardImgVer});
+}
