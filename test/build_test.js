@@ -85,4 +85,4 @@ exports.build = {
 	}
 };
 
-// console.log(grunt.config('_output.st'));
+console.log(grunt.config('_output.st'));
