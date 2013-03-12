@@ -44,8 +44,8 @@ module.exports = function(grunt) {
 		},
 
 		// Task configuration.
-		branch_src: 'static-te',
-		branch_dest: 'static-te-test',
+		branch_src: 'branch-dev',
+		branch_dest: 'branch-dev-test',
 
 		jshint: {
 			options: {
@@ -71,7 +71,6 @@ module.exports = function(grunt) {
 					// @see http://goo.gl/Oxp5z
 					loopfunc: true,
 					browser: false,
-					globals: false,
 					node: true,
 					es5: true
 				},
@@ -80,11 +79,10 @@ module.exports = function(grunt) {
 			test: {
 				options: {
 					browser: false,
-					globals: false,
 					node: true,
 					es5: true
 				},
-				src: ['test/**/*.js']
+				src: ['test/*.js']
 			}
 		},
 		watch: {
@@ -127,7 +125,7 @@ module.exports = function(grunt) {
 				expand: true,
 				cwd: '<%= branch_src %>/js/',
 				src: ['**/*.js'],
-				dest: '<%= branch_dest %>/js/'
+				dest: '<%= branch_dest %>/js/public/'
 			}
 		},
 		cssmin: {
@@ -135,7 +133,7 @@ module.exports = function(grunt) {
 				expand: true,
 				cwd: '<%= branch_src %>/css',
 				src: ['**/*.css'],
-				dest: '<%= branch_dest %>/css/'
+				dest: '<%= branch_dest %>/css/public/'
 			}
 		},
 		processCss: {
@@ -146,9 +144,6 @@ module.exports = function(grunt) {
 				expand: true,
 				cwd: '<%= cssmin.vips.dest %>',
 				src: ['**/*.css']
-			},
-			test: {
-				// src: '<%= branch_dest %>/css'
 			}
 		},
 		imagemin: {
@@ -379,6 +374,7 @@ module.exports = function(grunt) {
 		grunt.config('build', build);
 		var branches = preprocess('project');
 		grunt.config('clean.test', branches.getAll('test'));
+		grunt.task.run('clean:test');
 	});
 
 	// build task
@@ -597,7 +593,7 @@ module.exports = function(grunt) {
 				st_M = st_M.concat(st_data[branch].M || []);
 			}
 		}
-		if (st_M.length > 0) {
+		if (st_M.length > 0 && !grunt.file.exists(changelog)) {
 			grunt.log.warn('M _ M 更改的文件：');
 			grunt.log.writeln(st_M.join(grunt.util.linefeed));
 		}
@@ -609,14 +605,5 @@ module.exports = function(grunt) {
 
 	// for debug
 	grunt.registerTask('debug', function () {
-		var path = require('path');
-		console.log(path.join('', 'static-te'));
-		console.log(path.join('branches/', 'static-te'));
-		console.log(path.join('branches', '/static-te'));
-		console.log(path.join('branches/', '/static-te/'));
-		//console.log('msg: ' + grunt.option('m'));
-		//grunt.file.write('changelog', JSON.stringify(json, ' ', 4));
-		//grunt.log.writeln('Write to File changelog');
-		//console.log(grunt.config('processCss').options.imgDomain);
 	});
 };

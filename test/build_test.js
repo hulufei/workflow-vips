@@ -20,33 +20,33 @@ exports.isEmptyBranches = {
 exports.build = {
 	minifyJs: function (test) {
 		var original = fs.statSync(dev_static + 'js/new.js').size;
-		var actual = fs.statSync(test_static + 'js/new.js').size;
+		var actual = fs.statSync(test_static + 'js/public/new.js').size;
 		test.ok(actual < original, 'should minify new js file');
 
 		original = fs.statSync(dev_static + 'js/modified.js').size;
-		actual = fs.statSync(test_static + 'js/modified.js').size;
+		actual = fs.statSync(test_static + 'js/public/modified.js').size;
 		test.ok(actual < original, 'should minify modified js file');
 
-		test.ok(!grunt.file.exists(test_static + 'js/unchanged.js'), 'unchanged js file should not be minified');
+		test.ok(!grunt.file.exists(test_static + 'js/public/unchanged.js'), 'unchanged js file should not be minified');
 
 		test.done();
 	},
 	minifyCss: function (test) {
 		var original = fs.statSync(dev_static + 'css/new.css').size;
-		var actual = fs.statSync(test_static + 'css/new.css').size;
+		var actual = fs.statSync(test_static + 'css/public/new.css').size;
 		test.ok(actual < original, 'should minify new css file');
 
 		original = fs.statSync(dev_static + 'css/modified.css').size;
-		actual = fs.statSync(test_static + 'css/modified.css').size;
+		actual = fs.statSync(test_static + 'css/public/modified.css').size;
 		test.ok(actual < original, 'should minify modified css file');
 
-		test.ok(!grunt.file.exists(test_static + 'css/unchanged.css'), 'unchanged css file should not be minified');
+		test.ok(!grunt.file.exists(test_static + 'css/public/unchanged.css'), 'unchanged css file should not be minified');
 
 		test.done();
 	},
 	processCss: function (test) {
 		var expect = grunt.file.read('test/expected/vars.css');
-		var result = grunt.file.read(test_static + 'css/vars.css');
+		var result = grunt.file.read(test_static + 'css/public/vars.css');
 		test.equal(expect, result, 'should replace all the variables with build.json');
 		test.done();
 	},
@@ -90,13 +90,13 @@ console.log(grunt.config('_output.st'));
 // var st = { 'test/test-branches/tpl-a': { X: [ '?       test/test-branches/tpl-a/views/new.html' ] },
   // 'test/test-branches/static-a': 
    // { X: 
-      // [ '?       test/test-branches/static-a/css/new.css',
-        // '?       test/test-branches/static-a/css/vars.css',
-        // '?       test/test-branches/static-a/js/new.js',
+      // [ '?       test/test-branches/static-a/css/public/new.css',
+        // '?       test/test-branches/static-a/css/public/vars.css',
+        // '?       test/test-branches/static-a/js/public/new.js',
         // '?       test/test-branches/static-a/img/loading.gif',
         // '?       test/test-branches/static-a/img/optimize-png-test.png',
         // '?       test/test-branches/static-a/img/res/october.swf',
         // '?       test/test-branches/static-a/img/optimize-jpg-test.jpg' ],
      // M: 
-      // [ 'M       test/test-branches/static-a/css/modified.css',
-        // 'M       test/test-branches/static-a/js/modified.js' ] } };
+      // [ 'M       test/test-branches/static-a/css/public/modified.css',
+        // 'M       test/test-branches/static-a/js/public/modified.js' ] } };
