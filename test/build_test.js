@@ -79,10 +79,24 @@ exports.build = {
 		var actual = fs.statSync(dev_tpl + 'views/new.html').size;
 		var original = fs.statSync(test_tpl + 'views/new.html').size;
 		test.ok(actual === original, 'should just copy the html to test branch');
-		// FIXME
+		// TODO
 		// test.ok(!grunt.file.exists(test_tpl + 'views/unchanged.html'), 'should not process the unchanged html file');
 		test.done();
 	}
 };
 
 console.log(grunt.config('_output.st'));
+// backup st data
+// var st = { 'test/test-branches/tpl-a': { X: [ '?       test/test-branches/tpl-a/views/new.html' ] },
+  // 'test/test-branches/static-a': 
+   // { X: 
+      // [ '?       test/test-branches/static-a/css/new.css',
+        // '?       test/test-branches/static-a/css/vars.css',
+        // '?       test/test-branches/static-a/js/new.js',
+        // '?       test/test-branches/static-a/img/loading.gif',
+        // '?       test/test-branches/static-a/img/optimize-png-test.png',
+        // '?       test/test-branches/static-a/img/res/october.swf',
+        // '?       test/test-branches/static-a/img/optimize-jpg-test.jpg' ],
+     // M: 
+      // [ 'M       test/test-branches/static-a/css/modified.css',
+        // 'M       test/test-branches/static-a/js/modified.js' ] } };
