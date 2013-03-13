@@ -76,7 +76,8 @@ module.exports = function(grunt) {
 				},
 				src: 'Gruntfile.js'
 			},
-			test: {
+			vips: '<%= uglify.vips %>',
+			tests: {
 				options: {
 					browser: false,
 					node: true,
@@ -85,18 +86,17 @@ module.exports = function(grunt) {
 				src: ['test/*.js']
 			}
 		},
+		csslint: {
+			vips: '<%= cssmin.vips %>'
+		},
 		watch: {
 			gruntfile: {
 				files: '<%= jshint.gruntfile.src %>',
 				tasks: ['jshint:gruntfile']
 			},
-			test: {
-				files: '<%= jshint.test.src %>',
-				tasks: ['jshint:test', 'test']
-			},
-			dev: {
-				files: ['vipstatic'],
-				tasks: ['build']
+			tests: {
+				files: '<%= jshint.tests.src %>',
+				tasks: ['jshint:tests', 'test']
 			}
 		},
 		copy: {
@@ -241,6 +241,7 @@ module.exports = function(grunt) {
 	//grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-nodeunit');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
+	grunt.loadNpmTasks('grunt-contrib-csslint');
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	// load all grunt tasks
 	//require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
@@ -368,6 +369,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
 	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'nodeunit', 'clean:test']);
+	grunt.registerTask('monitor', ['prepare', 'watch:vips']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
@@ -380,8 +382,35 @@ module.exports = function(grunt) {
 		grunt.task.run('clean:test');
 	});
 
+	// TODO: 建立watch任务，对应分支做jshint，csslint等等
+	// 甚至在项目开始前svn copy新建分支
+	grunt.registerTask('prepare', function () {
+		var path = require('path');
+		var branches = preprocess('project');
+		var vips = {
+			files: [],
+			tasks: ['lint']
+		};
+		branches.getAll('dev').forEach(function (branch) {
+			vips.files.push(path.join(branch, '**/*.js'));
+			vips.files.push(path.join(branch, '**/*.css'));
+		});
+		grunt.config('watch.vips', vips);
+	});
+
+	// lint modified js and css
+	grunt.registerTask('lint', function () {
+		var branches = preprocess('project');
+		grunt.task.run('statuslog:dev');
+		branches.getAll('dev').forEach(function (branch) {
+			grunt.task.run(['apply', 'jshint', branch].join(':'));
+			grunt.task.run(['apply', 'csslint', branch].join(':'));
+		});
+	});
+
 	// build task
 	grunt.registerTask('build', function() {
+		preprocess('project');
 		var project = grunt.config('_project');
 		var static_branches = project.branches['static'] || {},
 				tpl_branches = project.branches['tpl'] || {},
@@ -408,15 +437,7 @@ module.exports = function(grunt) {
 		}
 	});
 
-	// TODO: 建立watch任务，对应分支做jshint，csslint等等
-	// 甚至在项目开始前svn copy新建分支
-	grunt.registerTask('setup', function () {
-		// var branches = preprocess('project');
-	});
-
-	/*
-	 * CSS变量替换
-	 */
+	// CSS变量替换
 	grunt.registerMultiTask('processCss', 'replace variables in CSS', function () {
 		var options =  this.options({
 			imgDomain: '',
