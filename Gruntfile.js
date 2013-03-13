@@ -313,6 +313,10 @@ module.exports = function(grunt) {
 	 * Set internal configs
 	 */
 	function preprocess(project) {
+		var branches = grunt.config('_branches');
+		if (!branches.isEmpty()) {
+			return branches;
+		}
 		project = project ? grunt.config(project) : grunt.config('project');
 		// 检查配置
 		['name', 'branches'].map(function (name) {
@@ -341,8 +345,7 @@ module.exports = function(grunt) {
 		}
 
 		// 保存所有相关的分支名
-		var branches = grunt.config('_branches'),
-				branch_src = '',
+		var branch_src = '',
 				static_branches = project.branches['static'] || {},
 				tpl_branches = project.branches['tpl'] || {};
 		for (branch_src in static_branches) {
@@ -364,7 +367,7 @@ module.exports = function(grunt) {
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
-	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'push', 'nodeunit', 'clean:test']);
+	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'nodeunit', 'clean:test']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
@@ -379,9 +382,6 @@ module.exports = function(grunt) {
 
 	// build task
 	grunt.registerTask('build', function() {
-		var branches = grunt.config('_branches');
-		branches = branches.isEmpty() ? preprocess('project') : branches;
-
 		var project = grunt.config('_project');
 		var static_branches = project.branches['static'] || {},
 				tpl_branches = project.branches['tpl'] || {},
@@ -529,8 +529,7 @@ module.exports = function(grunt) {
 
 	// Update all specified branches(dev/test)
 	grunt.registerTask('updateall', function (name) {
-		var branches = grunt.config('_branches');
-		branches = branches.isEmpty() ? preprocess('project') : branches;
+		var branches = preprocess('project');
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('update:' + branch);
 		});
@@ -538,8 +537,7 @@ module.exports = function(grunt) {
 
 	// Log file status of specified branches(dev/test)
 	grunt.registerTask('statuslog', function (name) {
-		var branches = grunt.config('_branches');
-		branches = branches.isEmpty() ? preprocess('project') : branches;
+		var branches = preprocess('project');
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('st:' + branch);
 		});
