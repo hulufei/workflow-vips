@@ -62,9 +62,7 @@ module.exports = function(grunt) {
 				boss: true,
 				eqnull: true,
 				browser: true,
-				globals: {
-					jQuery: true
-				}
+				jquery: true
 			},
 			gruntfile: {
 				options: {
@@ -105,7 +103,7 @@ module.exports = function(grunt) {
 					{
 						expand: true,
 						cwd: '<%= branch_src %>/img',
-						src: ['**/*', '!**/*.{jpg,jpeg,png}'],
+						src: ['**/*', '!**/*.{jpg,jpeg,png,db}'],
 						dest: '<%= branch_dest %>/img/'
 					},
 					{
@@ -258,6 +256,8 @@ module.exports = function(grunt) {
 		generate: function (revData, err) {
 			var branch = this.branch || grunt.option('branch'),
 					project = this.project;
+			// 兼容windows路径
+			branch = branch.replace(/\\/g, '/');
 			grunt.log.debug('Begin generate change log for: ' + project.name);
 			if (err) {
 				grunt.fatal(err);
@@ -369,7 +369,7 @@ module.exports = function(grunt) {
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
 	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'nodeunit', 'clean:test']);
-	grunt.registerTask('monitor', ['prepare', 'watch:vips']);
+	grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
@@ -384,7 +384,7 @@ module.exports = function(grunt) {
 
 	// TODO: 建立watch任务，对应分支做jshint，csslint等等
 	// 甚至在项目开始前svn copy新建分支
-	grunt.registerTask('prepare', function () {
+	grunt.registerTask('watch_setup', function () {
 		var path = require('path');
 		var branches = preprocess('project');
 		var vips = {
@@ -398,7 +398,7 @@ module.exports = function(grunt) {
 		grunt.config('watch.vips', vips);
 	});
 
-	// lint modified js and css
+	// lint added/modified js and css
 	grunt.registerTask('lint', function () {
 		var branches = preprocess('project');
 		grunt.task.run('statuslog:dev');
