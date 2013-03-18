@@ -363,8 +363,8 @@ module.exports = function(grunt) {
 		return branches;
 	}
 
-	// 发布提交
-	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commit', 'finish']);
+	// 提交到测试分支
+	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
@@ -533,8 +533,8 @@ module.exports = function(grunt) {
 		grunt.task.run('copy:vips');
 	});
 
-	// Commit all test branches
-	grunt.registerTask('commit', function () {
+	// Commit all branches(dev/test)
+	grunt.registerTask('commitall', function (name) {
 		grunt.task.requires('build');
 		var project = grunt.config('_project');
 		var branches = grunt.config('_branches');
@@ -543,7 +543,7 @@ module.exports = function(grunt) {
 			project = {name: 'default'};
 		}
 		ChangeLog.project = project;
-		branches.getAll('test').map(function (branch) {
+		branches.getAll(name).map(function (branch) {
 			grunt.task.run('commit:' + branch);
 		});
 	});
