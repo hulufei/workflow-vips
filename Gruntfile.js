@@ -364,7 +364,7 @@ module.exports = function(grunt) {
 	}
 
 	// 发布提交
-	grunt.registerTask('publish', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'push', 'finish']);
+	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commit', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
@@ -534,7 +534,7 @@ module.exports = function(grunt) {
 	});
 
 	// Commit all test branches
-	grunt.registerTask('push', function () {
+	grunt.registerTask('commit', function () {
 		grunt.task.requires('build');
 		var project = grunt.config('_project');
 		var branches = grunt.config('_branches');
@@ -564,7 +564,7 @@ module.exports = function(grunt) {
 		});
 	});
 
-	// svn update, push之前发现冲突
+	// svn update, commit之前发现冲突
 	grunt.registerTask('update', function (branch) {
 		grunt.config('branch_dest', branch);
 		grunt.task.run('shell:update');
@@ -599,7 +599,7 @@ module.exports = function(grunt) {
 			grunt.log.writeln(grunt.file.read(changelog));
 		}
 		else {
-			grunt.log.warn(changelog + ' not found! You may run push first.');
+			grunt.log.warn(changelog + ' not found! You may run commit first.');
 		}
 
 		var st_data = grunt.config('_output.st');
