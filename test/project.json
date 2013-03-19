@@ -1,5 +1,5 @@
 {
-	"name": "test",
+	"name": "unit",
 	"description": "unit tests",
 	"branches": {
 		"base": "test/test-branches",

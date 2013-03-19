@@ -23,6 +23,10 @@ exports.build = {
 		var actual = fs.statSync(test_static + 'js/public/new.js').size;
 		test.ok(actual < original, 'should minify new js file');
 
+		original = fs.statSync(dev_static + 'js/added.js').size;
+		actual = fs.statSync(test_static + 'js/public/added.js').size;
+		test.ok(actual < original, 'should minify added js file');
+
 		original = fs.statSync(dev_static + 'js/modified.js').size;
 		actual = fs.statSync(test_static + 'js/public/modified.js').size;
 		test.ok(actual < original, 'should minify modified js file');
@@ -35,6 +39,10 @@ exports.build = {
 		var original = fs.statSync(dev_static + 'css/new.css').size;
 		var actual = fs.statSync(test_static + 'css/public/new.css').size;
 		test.ok(actual < original, 'should minify new css file');
+
+		original = fs.statSync(dev_static + 'css/added.css').size;
+		actual = fs.statSync(test_static + 'css/public/added.css').size;
+		test.ok(actual < original, 'should minify added css file');
 
 		original = fs.statSync(dev_static + 'css/modified.css').size;
 		actual = fs.statSync(test_static + 'css/public/modified.css').size;
@@ -81,6 +89,15 @@ exports.build = {
 		test.ok(actual === original, 'should just copy the html to test branch');
 		// TODO
 		// test.ok(!grunt.file.exists(test_tpl + 'views/unchanged.html'), 'should not process the unchanged html file');
+		test.done();
+	}
+};
+
+exports.pick = {
+	main: function (test) {
+		var dist = grunt.config('project').name + '-dist/';
+		test.ok(grunt.file.exists(dist + 'added.js'), 'should pick the added js');
+		test.ok(grunt.file.exists(dist + 'added.css'), 'should pick the added css');
 		test.done();
 	}
 };

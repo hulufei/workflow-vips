@@ -1,4 +1,5 @@
 /*global module:false*/
+var path = require('path');
 module.exports = function(grunt) {
 	// Project configuration.
 	grunt.initConfig({
@@ -162,9 +163,7 @@ module.exports = function(grunt) {
 					stdout: true,
 					callback: function (err, stdout, stderr, cb) {
 						grunt.log.ok(grunt.config('shell.commit.command').green);
-						if (!grunt.option('no-changelog')) {
-							ChangeLog.generate(stdout, err);
-						}
+						ChangeLog.generate(stdout, err);
 						cb();
 					}
 				}
@@ -196,7 +195,7 @@ module.exports = function(grunt) {
 						st_data[branch] = st_data[branch] || {};
 						if (lines.length > 1) {
 							lines.map(function (line) {
-								['M', 'C', 'D', '\\?'].map(function (st) {
+								['A', 'M', 'C', 'D', '\\?'].map(function (st) {
 									// Note: match filepath pattern: /.*\s(.*)/
 									var pattern = new RegExp('^' + st + '.*');
 									var matches = line.match(pattern);
@@ -253,7 +252,11 @@ module.exports = function(grunt) {
 	var ChangeLog = {
 		project: {},
 		branch: '',
+		disabled: false,
 		generate: function (revData, err) {
+			if (this.disabled) {
+				return;
+			}
 			var branch = this.branch || grunt.option('branch'),
 					project = this.project;
 			// 兼容windows路径
@@ -305,6 +308,7 @@ module.exports = function(grunt) {
 				});
 			}
 			grunt.file.write(changelog, JSON.stringify(json, null, 4));
+			grunt.config('_output.changelog', json);
 			//grunt.log.writeln('Changelog generated: ' + changelog);
 		}
 	};
@@ -331,7 +335,6 @@ module.exports = function(grunt) {
 		}
 
 		// join branches
-		var path = require('path');
 		var joined_branches = {},
 				base = project.branches['base'];
 		if (base) {
@@ -365,10 +368,12 @@ module.exports = function(grunt) {
 
 	// 提交到测试分支
 	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
+	// 发布
+	grunt.registerTask('deploy', ['updateall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'pick', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
-	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'nodeunit', 'clean:test']);
+	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'pick', 'nodeunit', 'clean']);
 	grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
 
 	// set for testing the workflow
@@ -379,7 +384,14 @@ module.exports = function(grunt) {
 		grunt.config('build', build);
 		var branches = preprocess('project');
 		grunt.config('clean.test', branches.getAll('test'));
-		grunt.task.run('clean:test');
+		grunt.config('clean.unitdist', project.name + '-dist/');
+		grunt.config('_output.changelog', {
+			"description": "test pick",
+			"test/test-branches/static-a": {
+					"css/added.css": "r1859",
+					"js/added.js": "r1859"
+			}
+		});
 	});
 
 	// TODO: 建立watch任务，对应分支做jshint，csslint等等
@@ -493,7 +505,7 @@ module.exports = function(grunt) {
 		if (grunt.option('all')) {
 			grunt.task.run(task);
 		}
-		else if(st && (st.X || st.M)) {
+		else if(st && (st.X || st.M || st.A)) {
 			// Only process the changed or the new files
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
@@ -506,7 +518,8 @@ module.exports = function(grunt) {
 			cwd = cwd ? cwd.replace(/\\/g, '/') : '';
 			grunt.log.debug('replace cwd:' + cwd);
 			var filePattern = /\s+(.+)/;
-			var filepaths = (st['X'] || []).concat(st.M || []).map(function (st) {
+			var st_list = (st['X'] || []).concat(st.M || []).concat(st.A || []);
+			var filepaths = st_list.map(function (st) {
 				var match = st.match(filePattern);
 				if (match) {
 					// 兼容windows文件路径，删除文件路径开头的斜杠
@@ -543,6 +556,7 @@ module.exports = function(grunt) {
 			project = {name: 'default'};
 		}
 		ChangeLog.project = project;
+		ChangeLog.disabled = false;
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('commit:' + branch);
 		});
@@ -588,9 +602,60 @@ module.exports = function(grunt) {
 		grunt.task.run('shell:st');
 	});
 
+	/* update versions
+	 * 如果有更改(M)的图片，所有版本号+0.1
+	 * TODO: 如果更改的不是css中图片？
+	 */
+	grunt.registerTask('revver', function () {
+		grunt.task.run('update:build.json');
+		var st_data = grunt.config('_output.st');
+		var filepaths = [];
+		for (var branch in st_data) {
+			filepaths = filepaths.concat(st_data[branch].M || []).concat(st_data[branch].A || []);
+		}
+		if (grunt.file.isMatch(['**/*.{jpg,jpeg,png,gif}'], filepaths)) {
+			var buildConfig = grunt.config('buildConfig');
+			var buildVers = [];
+			for (var k in buildConfig) {
+				var v = parseFloat(buildConfig[k]);
+				if (v) {
+					buildConfig[k] = v + 0.1;
+					buildVers.push(k.green + ': ' + v.green + ' -> ' + buildConfig[k].green);
+				}
+			}
+			grunt.config('_output.build', buildVers);
+			grunt.config('buildConfig', buildConfig);
+			grunt.file.write('build.json', buildConfig);
+			ChangeLog.disabled = true;
+			grunt.task.run('commit:build.json');
+		}
+	});
+
+	/*
+	 * 挑选出发布的文件
+	 * 文件列表来源于changelog (_output.changelog)
+	 */
+	grunt.registerTask('pick', function () {
+		var project = grunt.config('_project');
+		var dist = project.name + '-dist/';
+		var output = grunt.config('_output');
+		var st_data = output.changelog;
+		for (var branch in st_data) {
+			var filelist = st_data[branch];
+			if (typeof filelist === 'object') {
+				for (var filepath in filelist) {
+					grunt.log.debug('src:' + path.join(branch, filepath));
+					var filename = path.basename(filepath);
+					var src = path.join(branch, filepath);
+					var dest = path.join(dist, filename);
+					grunt.file.copy(src, dest);
+				}
+			}
+		}
+	});
+
 	// finish: 所有任务都结束后，用来汇总输出一些结果信息
 	grunt.registerTask('finish', function () {
-		// grunt.task.requires('build');
 		var project = grunt.config('_project');
 		var branches = grunt.config('_branches');
 		var changelog = project.name + '-CHANGELOG';
@@ -599,30 +664,41 @@ module.exports = function(grunt) {
 			grunt.log.writeln(grunt.file.read(changelog));
 		}
 		else {
-			grunt.log.warn(changelog + ' not found! You may run commit first.');
+			grunt.log.warn(changelog + ' not found! You may run push first.');
 		}
 
-		var st_data = grunt.config('_output.st');
-		// X: new files, M: modified files
-		var st_X = [], st_M = [];
+		var output = grunt.config('_output');
+		var st_data = output.st;
+		// X: new files, M: modified files, A: added files
+		var st_X = [], st_M = [], st_A = [];
 		var test_branches = branches.getAll('test');
 		for (var branch in st_data) {
 			if (test_branches.indexOf(branch) > -1) {
 				st_X = st_X.concat(st_data[branch].X || []);
 				st_M = st_M.concat(st_data[branch].M || []);
+				st_A = st_A.concat(st_data[branch].A || []);
 			}
 		}
 		if (st_M.length > 0 && !grunt.file.exists(changelog)) {
 			grunt.log.warn('M _ M 更改的文件：');
 			grunt.log.writeln(st_M.join(grunt.util.linefeed));
 		}
+		if (st_A.length > 0 && !grunt.file.exists(changelog)) {
+			grunt.log.warn('A _ A 新增的文件：');
+			grunt.log.writeln(st_A.join(grunt.util.linefeed));
+		}
 		if (st_X.length > 0) {
 			grunt.log.warn('◉︵◉ 你可能还遗漏了这些文件:');
 			grunt.log.writeln(st_X.join(grunt.util.linefeed));
+		}
+		if (output.build) {
+			grunt.log.warn('B _ B 版本号更新:');
+			grunt.log.writeln(output.build.join(grunt.util.linefeed).green);
 		}
 	});
 
 	// for debug
 	grunt.registerTask('debug', function () {
+		grunt.file.copy('build.json', 'dist/build.json');
 	});
 };
