@@ -1,0 +1,27 @@
+{
+  "name": "grunt-workflow",
+  "version": "0.0.0",
+  "description": "Automate front-end workflow for vipshop",
+  "main": "Gruntfile.js",
+  "dependencies": {
+    "grunt": "~0.4.0rc8"
+  },
+  "devDependencies": {
+    "grunt-contrib-uglify": "~0.1.1",
+    "grunt-contrib-cssmin": "~0.4.1",
+    "grunt-shell": "~0.2.0",
+    "grunt-contrib-imagemin": "~0.1.2",
+    "grunt-contrib-copy": "~0.4.0",
+    "grunt-contrib-jshint": "~0.2.0",
+    "grunt-contrib-watch": "~0.3.1",
+    "grunt-contrib-nodeunit": "~0.1.2",
+    "grunt-contrib-clean": "~0.4.0",
+    "grunt-contrib-csslint": "~0.1.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "hui.liu <hui02.liu@vipshop.com>",
+  "license": "BSD"
+}

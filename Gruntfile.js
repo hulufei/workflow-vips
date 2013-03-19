@@ -217,6 +217,9 @@ module.exports = function(grunt) {
 				}
 			}
 		},
+		clean: {
+			picked: 'picked-dist'
+		},
 		nodeunit: {
 			tests: ['test/*_test.js']
 		},
@@ -369,29 +372,23 @@ module.exports = function(grunt) {
 	// 提交到测试分支
 	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
 	// 发布
-	grunt.registerTask('deploy', ['updateall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'pick', 'finish']);
+	grunt.registerTask('deploy', ['updateall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
-	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'pick', 'nodeunit', 'clean']);
+	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'clean:picked', 'pick', 'nodeunit', 'clean']);
 	grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
 		var project = grunt.file.readJSON('test/project.json');
 		var build = grunt.file.readJSON('test/build.json');
+		var changelog = project.name + '-CHANGELOG';
 		grunt.config('project', project);
 		grunt.config('build', build);
+		grunt.file.copy('test/' + changelog, changelog);
 		var branches = preprocess('project');
-		grunt.config('clean.test', branches.getAll('test'));
-		grunt.config('clean.unitdist', project.name + '-dist/');
-		grunt.config('_output.changelog', {
-			"description": "test pick",
-			"test/test-branches/static-a": {
-					"css/added.css": "r1859",
-					"js/added.js": "r1859"
-			}
-		});
+		grunt.config('clean.test', branches.getAll('test').concat(changelog));
 	});
 
 	// TODO: 建立watch任务，对应分支做jshint，csslint等等
@@ -633,25 +630,28 @@ module.exports = function(grunt) {
 
 	/*
 	 * 挑选出发布的文件
-	 * 文件列表来源于changelog (_output.changelog)
+	 * 文件列表来源于changelog文件
 	 */
 	grunt.registerTask('pick', function () {
-		var project = grunt.config('_project');
-		var dist = project.name + '-dist/';
-		var output = grunt.config('_output');
-		var st_data = output.changelog;
-		for (var branch in st_data) {
-			var filelist = st_data[branch];
-			if (typeof filelist === 'object') {
-				for (var filepath in filelist) {
-					grunt.log.debug('src:' + path.join(branch, filepath));
-					var filename = path.basename(filepath);
-					var src = path.join(branch, filepath);
-					var dest = path.join(dist, filename);
-					grunt.file.copy(src, dest);
+		var dist = grunt.config('clean.picked');
+		var project = grunt.config('project');
+		var changelog = project.name + '-CHANGELOG';
+		if (grunt.file.exists(changelog)) {
+			var st_data = grunt.file.readJSON(changelog);
+			for (var branch in st_data) {
+				var filelist = st_data[branch];
+				if (typeof filelist === 'object') {
+					for (var filepath in filelist) {
+						grunt.log.debug('src:' + path.join(branch, filepath));
+						var filename = path.basename(filepath);
+						var src = path.join(branch, filepath);
+						var dest = path.join(dist, filename);
+						grunt.file.copy(src, dest);
+					}
 				}
 			}
 		}
+		grunt.config('_output.picked_dist', dist);
 	});
 
 	// finish: 所有任务都结束后，用来汇总输出一些结果信息
@@ -694,6 +694,9 @@ module.exports = function(grunt) {
 		if (output.build) {
 			grunt.log.warn('B _ B 版本号更新:');
 			grunt.log.writeln(output.build.join(grunt.util.linefeed).green);
+		}
+		if (output.picked_dist) {
+			grunt.log.warn('你可以在' + output.picked_dist.green + '找到需要发布的文件');
 		}
 	});
 

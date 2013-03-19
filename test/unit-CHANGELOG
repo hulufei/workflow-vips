@@ -1,0 +1,7 @@
+{
+	"description": "test pick",
+	"test/test-branches/static-a": {
+			"css/added.css": "r1859",
+			"js/added.js": "r1859"
+	}
+}
