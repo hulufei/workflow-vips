@@ -370,9 +370,9 @@ module.exports = function(grunt) {
 	}
 
 	// 提交到测试分支
-	grunt.registerTask('push', ['updateall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
+	grunt.registerTask('push', ['upall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
 	// 发布
-	grunt.registerTask('deploy', ['updateall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
+	grunt.registerTask('deploy', ['upall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 测试流程
@@ -391,8 +391,8 @@ module.exports = function(grunt) {
 		grunt.config('clean.test', branches.getAll('test').concat(changelog));
 	});
 
-	// TODO: 建立watch任务，对应分支做jshint，csslint等等
-	// 甚至在项目开始前svn copy新建分支
+	// 建立watch任务，对应分支做jshint，csslint
+	// TODO: 甚至在项目开始前svn copy新建分支
 	grunt.registerTask('watch_setup', function () {
 		var path = require('path');
 		var branches = preprocess('project');
@@ -560,7 +560,7 @@ module.exports = function(grunt) {
 	});
 
 	// Update all specified branches(dev/test)
-	grunt.registerTask('updateall', function (name) {
+	grunt.registerTask('upall', function (name) {
 		var branches = preprocess('project');
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('update:' + branch);
