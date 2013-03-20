@@ -96,7 +96,6 @@ exports.build = {
 exports.pick = {
 	main: function (test) {
 		var dist = grunt.config('clean.picked');
-		console.log(dist);
 		test.ok(grunt.file.exists(dist + '/added.js'), 'should pick the added js');
 		test.ok(grunt.file.exists(dist + '/added.css'), 'should pick the added css');
 		test.done();

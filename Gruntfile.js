@@ -372,12 +372,13 @@ module.exports = function(grunt) {
 	// 提交到测试分支
 	grunt.registerTask('push', ['upall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
 	// 发布
-	grunt.registerTask('deploy', ['upall:dev', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
+	grunt.registerTask('deploy', ['upall:dev', 'update:build.json', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
-	// 测试流程
-	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'clean:picked', 'pick', 'nodeunit', 'clean']);
+	// 监听文件更改，做csslint和jshint
 	grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
+	// unit test
+	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'clean:picked', 'pick', 'nodeunit', 'clean']);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
@@ -394,7 +395,6 @@ module.exports = function(grunt) {
 	// 建立watch任务，对应分支做jshint，csslint
 	// TODO: 甚至在项目开始前svn copy新建分支
 	grunt.registerTask('watch_setup', function () {
-		var path = require('path');
 		var branches = preprocess('project');
 		var vips = {
 			files: [],
@@ -604,11 +604,10 @@ module.exports = function(grunt) {
 	 * TODO: 如果更改的不是css中图片？
 	 */
 	grunt.registerTask('revver', function () {
-		grunt.task.run('update:build.json');
 		var st_data = grunt.config('_output.st');
 		var filepaths = [];
 		for (var branch in st_data) {
-			filepaths = filepaths.concat(st_data[branch].M || []).concat(st_data[branch].A || []);
+			filepaths = filepaths.concat(st_data[branch].M || []);
 		}
 		if (grunt.file.isMatch(['**/*.{jpg,jpeg,png,gif}'], filepaths)) {
 			var buildConfig = grunt.config('buildConfig');
@@ -620,7 +619,7 @@ module.exports = function(grunt) {
 					buildVers.push(k.green + ': ' + v.green + ' -> ' + buildConfig[k].green);
 				}
 			}
-			grunt.config('_output.build', buildVers);
+			grunt.config('_output.revver', buildVers);
 			grunt.config('buildConfig', buildConfig);
 			grunt.file.write('build.json', buildConfig);
 			ChangeLog.disabled = true;
@@ -691,9 +690,9 @@ module.exports = function(grunt) {
 			grunt.log.warn('◉︵◉ 你可能还遗漏了这些文件:');
 			grunt.log.writeln(st_X.join(grunt.util.linefeed));
 		}
-		if (output.build) {
+		if (output.revver) {
 			grunt.log.warn('B _ B 版本号更新:');
-			grunt.log.writeln(output.build.join(grunt.util.linefeed).green);
+			grunt.log.writeln(output.revver.join(grunt.util.linefeed).green);
 		}
 		if (output.picked_dist) {
 			grunt.log.warn('你可以在' + output.picked_dist.green + '找到需要发布的文件');
