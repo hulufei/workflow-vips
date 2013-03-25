@@ -81,6 +81,8 @@ exports.build = {
 		original = fs.statSync(test_static + 'img/res/october.swf').size;
 		test.ok(actual === original, 'should just copy other resources');
 
+		test.ok(!grunt.file.exists(test_static + 'img/unchanged.gif'), 'unchanged gif file should not be copied');
+
 		test.done();
 	},
 	tpl: function (test) {

@@ -48,8 +48,8 @@ module.exports = function(grunt) {
 		},
 
 		// Task configuration.
-		branch_src: 'branch-dev',
-		branch_dest: 'branch-dev-test',
+		branch_src: '65/demo',
+		branch_dest: '65/demo-test',
 
 		jshint: {
 			options: {
@@ -103,20 +103,16 @@ module.exports = function(grunt) {
 		},
 		copy: {
 			vips: {
-				files: [
-					{
-						expand: true,
-						cwd: '<%= branch_src %>/img',
-						src: ['**/*', '!**/*.{jpg,jpeg,png,db}'],
-						dest: '<%= branch_dest %>/img/'
-					},
-					{
-						expand: true,
-						cwd: '<%= branch_src %>/views',
-						src: ['**/*'],
-						dest: '<%= branch_dest %>/views/'
-					}
-				]
+				expand: true,
+				cwd: '<%= branch_src %>/img',
+				src: ['**/*', '!**/*.{jpg,jpeg,png,db}'],
+				dest: '<%= branch_dest %>/img/'
+			},
+			tpl: {
+				expand: true,
+				cwd: '<%= branch_src %>/views',
+				src: ['**/*'],
+				dest: '<%= branch_dest %>/views/'
 			}
 		},
 		uglify: {
@@ -450,19 +446,17 @@ module.exports = function(grunt) {
 		for (branch_src in static_branches) {
 			grunt.log.debug('Building ' + branch_src);
 			branch_dest = static_branches[branch_src];
-			['uglify', 'cssmin', 'processCss', 'imagemin'].forEach(function (task) {
+			['uglify', 'cssmin', 'processCss', 'imagemin', 'copy'].forEach(function (task) {
 				// 生成对应的配置段
 				grunt.task.run(['apply', task, branch_src, branch_dest].join(':'));
 			}); 
-			// 同步静态目录中非jpg，png等其他资源
-			grunt.task.run('cp:' + branch_src + ':' + branch_dest);
 		}
 
 		// 对应模板页面分支的处理
 		for (var tpl_src in tpl_branches) {
 			var tpl_dest = tpl_branches[tpl_src];
 			// 同步模板页
-			grunt.task.run('cp:' + tpl_src + ':' + tpl_dest);
+			grunt.task.run('copytpl:' + tpl_src + ':' + tpl_dest);
 		}
 	});
 
@@ -523,7 +517,7 @@ module.exports = function(grunt) {
 			grunt.task.run(task);
 		}
 		else if(st && (st.X || st.M || st.A)) {
-			// Only process the changed or the new files
+			// Only process the added, changed or the new files(X, M, A)
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
 			var patterns = grunt.config(task).vips.src;
@@ -557,10 +551,10 @@ module.exports = function(grunt) {
 	});
 
 	// copy wrapper
-	grunt.registerTask('cp', function (branch_src, branch_dest) {
+	grunt.registerTask('copytpl', function (branch_src, branch_dest) {
 		grunt.config('branch_src', branch_src);
 		grunt.config('branch_dest', branch_dest);
-		grunt.task.run('copy:vips');
+		grunt.task.run('copy:tpl');
 	});
 
 	// Commit all branches(dev/test)
