@@ -34,6 +34,9 @@ module.exports = function(grunt) {
 				});
 				return arr;
 			},
+			clean: function () {
+				this.dev.tpl = this.dev.static = this.test.tpl = this.test.static = [];
+			},
 			isEmpty: function () {
 				return !this.getAll().length;
 			},
@@ -158,40 +161,44 @@ module.exports = function(grunt) {
 		},
 		shell: {
 			commit: {
-				command: 'svn commit -m "' + grunt.option('m') + '" ' + (grunt.option('branch') || '<%= branch_dest %>'),
+				command: 'svn commit -m "' + grunt.option('m') + '" <%= branch_dest %>',
 				options: {
 					stdout: true,
 					callback: function (err, stdout, stderr, cb) {
 						grunt.log.ok(grunt.config('shell.commit.command').green);
-						ChangeLog.generate(stdout, err);
+						if (err) {
+							grunt.fatal(err, 1);
+						}
+						ChangeLog.generate(stdout);
 						cb();
 					}
 				}
 			},
 			update: {
-				command: 'svn update ' + (grunt.option('branch') || '<%= branch_dest %>'),
+				command: 'svn update ' + '<%= branch_dest %>',
 				options: {
 					stderr: true,
 					callback: function (err, stdout, stderr, cb) {
 						grunt.log.ok(grunt.config('shell.update.command').green);
 						if (err) {
-							grunt.fatal(err);
+							grunt.fatal(err, 1);
 						}
 						cb();
 					}
 				}
 			},
 			st: {
-				command: 'svn st ' + (grunt.option('branch') || '<%= branch_dest %>'),
+				command: 'svn st ' + '<%= branch_dest %>',
 				options: {
 					callback: function (err, stdout, stderr, cb) {
 						grunt.log.ok(grunt.config('shell.st.command').green);
 						if (err) {
-							grunt.fatal(err);
+							grunt.fatal(err, 1);
 						}
 						var lines = stdout.split(grunt.util.linefeed),
 							branch = grunt.config('branch_dest'),
 							st_data = grunt.config('_output.st');
+						var cwd = grunt.option('cwd');
 						st_data[branch] = st_data[branch] || {};
 						if (lines.length > 1) {
 							lines.map(function (line) {
@@ -205,8 +212,9 @@ module.exports = function(grunt) {
 										grunt.log.debug('line: ' + line);
 										grunt.log.debug('status pattern: ' + pattern);
 										grunt.log.debug('status matches: ' + matches);
+										grunt.log.debug('replaced cwd: ' + cwd);
 										st_data[branch][st] = st_data[branch][st] || [];
-										st_data[branch][st].push(matches[0]);
+										st_data[branch][st].push(matches[0].replace(cwd, ''));
 									}
 								});
 							});
@@ -256,24 +264,24 @@ module.exports = function(grunt) {
 		project: {},
 		branch: '',
 		disabled: false,
-		generate: function (revData, err) {
+		generate: function (revData, rev) {
 			if (this.disabled) {
 				return;
 			}
 			var branch = this.branch || grunt.option('branch'),
-					project = this.project;
-			// 兼容windows路径
-			branch = branch.replace(/\\/g, '/');
+				project = this.project;
 			grunt.log.debug('Begin generate change log for: ' + project.name);
-			if (err) {
-				grunt.fatal(err);
-			}
 			if (!branch) {
-				grunt.fatal('需要指定提交的branch');
+				grunt.fatal('需要指定提交的branch', 1);
 			}
+			var cwd = grunt.option('cwd');
+			// 兼容windows路径
+			cwd = cwd ? cwd.replace(/\\/g, '/') : '';
+			branch = branch.replace(/\\/g, '/');
 			var changelog = project.name + '-CHANGELOG',
-					filepath = '',
-					json = {};
+				filepath = '', lines, filePattern,
+				json = {};
+			grunt.log.debug('Cwd: ' + cwd);
 			grunt.log.debug('Branch: ' + branch);
 			if (grunt.file.exists(changelog)) {
 				grunt.log.debug('File: ' + changelog + ' exists');
@@ -283,22 +291,29 @@ module.exports = function(grunt) {
 				// 关于项目的说明，可以配置在<%= project.description %>
 				json['description'] = project.description || '';
 			}
-			var lines = revData.trim().split(grunt.util.linefeed),
-					rev = 'r' + lines[lines.length - 1].match(/\d+/),
-					filePattern = /.*\s(.*\/.*\..+)/;
+			if (rev) {
+				// revData read from hook
+				filePattern = /(.*\/.*\..+)/;
+			}
+			else {
+				// revData from command line
+				filePattern = /.*\s(.*\/.*\..+)/;
+				rev = lines[lines.length - 1].match(/\d+/);
+			}
+			lines = revData.trim().split(grunt.util.linefeed);
 			grunt.log.debug('lines: ' + lines);
 			grunt.log.debug('last line: ' + lines[lines.length - 1]);
 			grunt.log.debug('rev: ' + rev);
 			filePattern.compile(filePattern);
 			lines.map(function (line) {
 				// 兼容windows文件路径
-				line = line.replace(/\\/g, '/');
+				line = line.replace(cwd, '').replace(/\\/g, '/');
 				var match = line.match(filePattern);
 				if (match) {
 					grunt.log.debug('file matches: ' + match);
 					filepath = match[1].replace(branch + '/', '').trim();
 					json[branch] = json[branch] || {};
-					json[branch][filepath] = rev;
+					json[branch][filepath] = 'r' + rev;
 				}
 			});
 			// 如果有删除的文件更改，标注为'D'
@@ -330,11 +345,11 @@ module.exports = function(grunt) {
 		['name', 'branches'].map(function (name) {
 			if (!project.hasOwnProperty(name)) {
 				grunt.log.error(project);
-				grunt.fatal('缺失配置：' + name);
+				grunt.fatal('缺失配置：' + name, 1);
 			}
 		});
 		if (project.name.trim() === '') {
-			grunt.fatal('请指定要构建的项目名');
+			grunt.fatal('请指定要构建的项目名', 1);
 		}
 
 		// join branches
@@ -345,7 +360,12 @@ module.exports = function(grunt) {
 				var bs = project.branches[k];
 				joined_branches[k] = joined_branches[k] || {};
 				for (var dev in bs) {
-					joined_branches[k][path.join(base, dev)] = path.join(base, bs[dev]);
+					// remove last slash
+					dev = dev.replace(/[\/\\]$/, '');
+					// compatible with windows
+					var src = path.join(base, dev).replace(/\\/g, '/');
+					var des = path.join(base, bs[dev]).replace(/\\/g, '/');
+					joined_branches[k][src] = des;
 				}
 			});
 			project.branches = joined_branches;
@@ -418,7 +438,7 @@ module.exports = function(grunt) {
 	});
 
 	// build task
-	grunt.registerTask('build', function() {
+	grunt.registerTask('build', function () {
 		preprocess('project');
 		var project = grunt.config('_project');
 		var static_branches = project.branches['static'] || {},
@@ -473,7 +493,7 @@ module.exports = function(grunt) {
 				// check if all variables are replaced
 				if (variablePattern.test(css)) {
 					grunt.fatal('File ' + filepath +
-						'\nVariables does not be replaced all:' + css.match(variablePattern));
+						'\nVariables does not be replaced all:' + css.match(variablePattern), 1);
 				}
 				grunt.file.write(filepath, css);
 				grunt.log.ok('Replace ' + filepath + ' Done!');
@@ -582,9 +602,9 @@ module.exports = function(grunt) {
 	});
 
 	// svn commit，生成Changelog文件
-	grunt.registerTask('commit', function(branch) {
+	grunt.registerTask('commit', function (branch) {
 		if (!branch) {
-			grunt.fatal('没有指定要提交的分支');
+			grunt.fatal('没有指定要提交的分支', 1);
 		}
 		// 配置changelog
 		ChangeLog.branch = branch;
@@ -593,7 +613,7 @@ module.exports = function(grunt) {
 		grunt.task.run(['shell:commit']);
 	});
 
-	// svn st, 检查遗漏文件
+	// svn st, 获取更改文件
 	grunt.registerTask('st', function (branch) {
 		grunt.config('branch_dest', branch);
 		grunt.task.run('shell:st');
@@ -687,7 +707,7 @@ module.exports = function(grunt) {
 			grunt.log.writeln(st_A.join(grunt.util.linefeed));
 		}
 		if (st_X.length > 0) {
-			grunt.log.warn('◉︵◉ 你可能还遗漏了这些文件:');
+			grunt.log.warn('? _ ? 你可能还遗漏了这些文件:');
 			grunt.log.writeln(st_X.join(grunt.util.linefeed));
 		}
 		if (output.revver) {
@@ -696,6 +716,79 @@ module.exports = function(grunt) {
 		}
 		if (output.picked_dist) {
 			grunt.log.warn('你可以在' + output.picked_dist.green + '找到需要发布的文件');
+		}
+	});
+
+	// hook TortoiseSVN
+	grunt.registerTask('hook', function (action) {
+		var branches = preprocess('project');
+		var project = grunt.config('_project');
+		var static_branches = project.branches['static'] || {};
+		var branch = grunt.option('branch');
+		var cwd = grunt.option('cwd');
+		var rev = grunt.option('rev');
+		grunt.log.debug('branch: ' + branch);
+		grunt.log.debug('cwd: ' + cwd);
+		// trim absolute path
+		branch = branch.replace(cwd, '').replace(/\\/g, '/').replace(/^\//, '');
+		grunt.log.debug('trimed branch: ' + branch);
+		grunt.log.debug('original project: ');
+		grunt.log.debug(project);
+		// reset project to specific branch
+		var reset = {}, isDev;
+		for (var branch_src in static_branches) {
+			// TortoiseSVN is annoyed when commit only one file, 
+			// the committed branch passed to hook will be the committed file's 
+			// parent directory, like `branches/demo/js` but not `branches/demo`, so
+			// slice the string to compare. But `branches/demo-test/js` will match
+			// `branches/demo`, so add a slash in the end.
+			var branch_test = static_branches[branch_src];
+			if ((branch_src + '/') === (branch + '/').slice(0, branch_src.length + 1)) {
+				//branch is a dev branch
+				isDev = true;
+				branch = branch_src;
+				grunt.log.debug('branch is a dev branch, set branch: ' + branch);
+				reset[branch_src] = branch_test;
+				break;
+			}
+			else if ((branch_test + '/') === (branch + '/').slice(0, branch_test.length + 1)) {
+				// branch is a test branch
+				isDev = false;
+				branch = branch_test;
+				grunt.log.debug('branch is a test branch, set branch: ' + branch);
+				reset[branch_src] = branch_test;
+				break;
+			}
+		}
+		if (Object.keys(reset).length === 0) {
+			grunt.fatal('Please confirm the project.json configured correctly, branch not found: ' + branch, 1);
+		}
+		project.branches['base'] = '';
+		project.branches['static'] = reset;
+		project.branches['tpl'] = {};
+		grunt.config('project', project);
+		branches.clean();
+		grunt.config('_branch', branches);
+		grunt.log.debug('====resetted project====');
+		grunt.log.debug(project);
+		grunt.log.debug('resetted branch is empty: ' + branches.isEmpty());
+
+		if (action === 'startcommit') {
+			grunt.task.run(['statuslog:dev', 'build']);
+		}
+		else if (!isDev && action === 'postcommit') {
+			var messagefile = grunt.option('messagefile');
+			var revData = grunt.file.read(messagefile);
+			revData = revData.split(grunt.util.linefeed).map(function (line) {
+				return line.replace(cwd, '');
+			}).join(grunt.util.linefeed);
+			grunt.log.debug('committed data: ');
+			grunt.log.debug(revData);
+			ChangeLog.project = project;
+			ChangeLog.branch = branch;
+			grunt.log.debug('changelog branch: ' + branch);
+			ChangeLog.disabled = false;
+			ChangeLog.generate(revData, rev);
 		}
 	});
 
