@@ -755,7 +755,7 @@ module.exports = function(grunt) {
 			}
 		}
 		if (Object.keys(reset).length === 0) {
-			grunt.fatal('Please confirm the project.json configured correctly, branch not found: ' + branch, 1);
+			grunt.fatal('Please confirm the project.json and the hook script configured correctly, branch not found: ' + branch, 1);
 		}
 		project.branches['base'] = '';
 		project.branches['static'] = reset;
