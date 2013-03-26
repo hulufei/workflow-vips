@@ -388,7 +388,7 @@ module.exports = function(grunt) {
 	// 提交到测试分支
 	grunt.registerTask('push', ['upall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
 	// 发布
-	grunt.registerTask('deploy', ['upall:dev', 'update:build.json', 'statuslog:dev', 'revver', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
+	grunt.registerTask('deploy', ['upall:dev', 'update:build.json', 'statuslog:dev', 'rever', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
 	// 监听文件更改，做csslint和jshint
@@ -614,26 +614,39 @@ module.exports = function(grunt) {
 	});
 
 	/* update versions
-	 * 如果有更改(M)的图片，所有版本号+0.1
-	 * TODO: 如果更改的不是css中图片？
+	 * 如果有更改(M)的图片，对应build.json字段版本号+0.1
 	 */
-	grunt.registerTask('revver', function () {
+	grunt.registerTask('rever', function () {
 		var st_data = grunt.config('_output.st');
-		var filepaths = [];
+		var st_M = [], imgfiles, cssfiles;
+		// keys to be re-version
+		var dict_rev = {};
 		for (var branch in st_data) {
-			filepaths = filepaths.concat(st_data[branch].M || []);
+			st_M = st_M.concat(st_data[branch].M || []);
 		}
-		if (grunt.file.isMatch(['**/*.{jpg,jpeg,png,gif}'], filepaths)) {
+		imgfiles = grunt.file.match(['**/*.{jpg,jpeg,png,gif}'], st_M);
+		if (imgfiles.length > 0) {
+			cssfiles = grunt.file.match(['**/*.css'], st_M);
+			imgfiles.forEach(function (imgfile) {
+				var name = path.basename(imgfile);
+				cssfiles.forEach(function (cssfile) {
+					var pattern = new RegExp(name + '\\?\\{\\$(.+)\\}');
+					var matches = grunt.file.read(cssfile).match(pattern);
+					if (matches) {
+						dict_rev[matches[1]] = true;
+					}
+				});
+			});
 			var buildConfig = grunt.config('buildConfig');
-			var buildVers = [];
-			for (var k in buildConfig) {
+			var revs = [];
+			for (var k in dict_rev) {
 				var v = parseFloat(buildConfig[k]);
 				if (v) {
 					buildConfig[k] = v + 0.1;
-					buildVers.push(k.green + ': ' + v.green + ' -> ' + buildConfig[k].green);
+					revs.push(k.green + ': ' + v.green + ' -> ' + buildConfig[k].green);
 				}
 			}
-			grunt.config('_output.revver', buildVers);
+			grunt.config('_output.revs', revs);
 			grunt.config('buildConfig', buildConfig);
 			grunt.file.write('build.json', buildConfig);
 			ChangeLog.disabled = true;
@@ -704,9 +717,9 @@ module.exports = function(grunt) {
 			grunt.log.warn('? _ ? 你可能还遗漏了这些文件:');
 			grunt.log.writeln(st_X.join(grunt.util.linefeed));
 		}
-		if (output.revver) {
+		if (output.revs) {
 			grunt.log.warn('B _ B 版本号更新:');
-			grunt.log.writeln(output.revver.join(grunt.util.linefeed).green);
+			grunt.log.writeln(output.revs.join(grunt.util.linefeed));
 		}
 		if (output.picked_dist) {
 			grunt.log.warn('你可以在' + output.picked_dist.green + '找到需要发布的文件');
@@ -788,6 +801,9 @@ module.exports = function(grunt) {
 
 	// for debug
 	grunt.registerTask('debug', function () {
-		grunt.file.copy('build.json', 'dist/build.json');
+		var m = 'branches/demo/css/test.css';
+		var fs = grunt.file.match(['**/*.css'], m);
+		console.log(path.basename(m));
+		console.log(fs);
 	});
 };
