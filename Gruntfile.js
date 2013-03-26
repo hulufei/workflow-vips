@@ -48,8 +48,8 @@ module.exports = function(grunt) {
 		},
 
 		// Task configuration.
-		branch_src: '65/demo',
-		branch_dest: '65/demo-test',
+		branch_src: 'branch-dev',
+		branch_dest: 'branch-dev-test',
 
 		jshint: {
 			options: {
@@ -730,7 +730,6 @@ module.exports = function(grunt) {
 	grunt.registerTask('hook', function (action) {
 		var branches = preprocess('project');
 		var project = grunt.config('_project');
-		var static_branches = project.branches['static'] || {};
 		var branch = grunt.option('branch');
 		var cwd = grunt.option('cwd');
 		var rev = grunt.option('rev');
@@ -741,44 +740,57 @@ module.exports = function(grunt) {
 		grunt.log.debug('trimed branch: ' + branch);
 		grunt.log.debug('original project: ');
 		grunt.log.debug(project);
-		// reset project to specific branch
-		var reset = {}, isDev;
-		for (var branch_src in static_branches) {
-			// TortoiseSVN is annoyed when commit only one file, 
-			// the committed branch passed to hook will be the committed file's 
-			// parent directory, like `branches/demo/js` but not `branches/demo`, so
-			// slice the string to compare. But `branches/demo-test/js` will match
-			// `branches/demo`, so add a slash in the end.
-			var branch_test = static_branches[branch_src];
-			if ((branch_src + '/') === (branch + '/').slice(0, branch_src.length + 1)) {
-				//branch is a dev branch
-				isDev = true;
-				branch = branch_src;
-				grunt.log.debug('branch is a dev branch, set branch: ' + branch);
-				reset[branch_src] = branch_test;
-				break;
+
+		// search branch, if found then reset project configuration to the branch
+		var reset_branch = {}, isDev;
+		function search(name) {
+			var bs = project.branches[name] || {};
+			var branch_src, branch_test;
+			for (branch_src in bs) {
+				// TortoiseSVN is annoyed when commit only one file, 
+				// the committed branch passed to hook will be the committed file's 
+				// parent directory, like `branches/demo/js` but not `branches/demo`, so
+				// slice the string to compare. But `branches/demo-test/js` will match
+				// `branches/demo`, so add a slash in the end.
+				branch_test = bs[branch_src];
+				// search the test branch first, for the tweak dev/test have same name to set
+				// correct `isDev` value.
+				if ((branch_test + '/') === (branch + '/').slice(0, branch_test.length + 1)) {
+					// branch is a test branch
+					isDev = false;
+					branch = branch_test;
+					grunt.log.debug('branch is a test branch, set branch: ' + branch);
+					reset_branch[branch_src] = branch_test;
+					break;
+				}
+				else if ((branch_src + '/') === (branch + '/').slice(0, branch_src.length + 1)) {
+					//branch is a dev branch
+					isDev = true;
+					branch = branch_src;
+					grunt.log.debug('branch is a dev branch, set branch: ' + branch);
+					reset_branch[branch_src] = branch_test;
+					break;
+				}
 			}
-			else if ((branch_test + '/') === (branch + '/').slice(0, branch_test.length + 1)) {
-				// branch is a test branch
-				isDev = false;
-				branch = branch_test;
-				grunt.log.debug('branch is a test branch, set branch: ' + branch);
-				reset[branch_src] = branch_test;
-				break;
+			if (Object.keys(reset_branch).length > 0) {
+				project.branches = {};
+				project.branches[name] = reset_branch;
+				grunt.config('project', project);
+				branches.clean();
+				grunt.config('_branch', branches);
+				grunt.log.debug('====resetted project====');
+				grunt.log.debug(project);
+				grunt.log.debug('resetted branch is empty: ' + branches.isEmpty());
 			}
 		}
-		if (Object.keys(reset).length === 0) {
-			grunt.fatal('Please confirm the project.json configured correctly, branch not found: ' + branch, 1);
+
+		search('static');
+		if (Object.keys(reset_branch).length === 0) {
+			search('tpl');
 		}
-		project.branches['base'] = '';
-		project.branches['static'] = reset;
-		project.branches['tpl'] = {};
-		grunt.config('project', project);
-		branches.clean();
-		grunt.config('_branch', branches);
-		grunt.log.debug('====resetted project====');
-		grunt.log.debug(project);
-		grunt.log.debug('resetted branch is empty: ' + branches.isEmpty());
+		if (Object.keys(reset_branch).length === 0) {
+			grunt.fatal('Please confirm the project.json and the hook script configured correctly, branch not found: ' + branch, 1);
+		}
 
 		if (action === 'startcommit') {
 			grunt.task.run(['statuslog:dev', 'build']);
