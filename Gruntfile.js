@@ -126,6 +126,12 @@ module.exports = function(grunt) {
 				dest: '<%= branch_dest %>/js/public/'
 			}
 		},
+		closurecompiler: {
+			options: {
+				'compilation_level': 'WHITESPACE_ONLY'
+			},
+			vips: '<%= uglify.vips %>'
+		},
 		cssmin: {
 			vips: {
 				expand: true,
@@ -241,6 +247,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-imagemin');
 	grunt.loadNpmTasks('grunt-contrib-clean');
+	grunt.loadNpmTasks('grunt-closurecompiler');
 	grunt.loadNpmTasks('grunt-shell');
 	//grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-contrib-nodeunit');
@@ -386,15 +393,47 @@ module.exports = function(grunt) {
 	}
 
 	// 提交到测试分支
-	grunt.registerTask('push', ['upall:dev', 'statuslog:dev', 'build', 'statuslog:test', 'commitall:test', 'finish']);
+	grunt.registerTask('push', [
+		'upall:dev', 
+		'statuslog:dev', 
+		'build', 
+		'statuslog:test', 
+		'commitall:test', 
+		'finish'
+	]);
 	// 发布
-	grunt.registerTask('deploy', ['upall:dev', 'update:build.json', 'statuslog:dev', 'rever', 'build', 'statuslog:test', 'commitall:test', 'clean:picked', 'pick', 'finish']);
+	grunt.registerTask('deploy', [
+		'upall:dev', 
+		'update:build.json', 
+		'statuslog:dev', 
+		'rever', 
+		'build', 
+		'statuslog:test', 
+		'commitall:test', 
+		'clean:picked', 
+		'pick', 
+		'finish'
+	]);
 	// 不依赖网络，可供预览更改
-	grunt.registerTask('taste', ['statuslog:dev', 'build', 'statuslog:test', 'finish']);
+	grunt.registerTask('taste', [
+		'statuslog:dev', 
+		'build', 
+		'statuslog:test', 
+		'finish'
+	]);
 	// 监听文件更改，做csslint和jshint
 	grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
 	// unit test
-	grunt.registerTask('test', ['test_setup', 'statuslog:dev', 'build', 'statuslog:test', 'clean:picked', 'pick', 'nodeunit', 'clean']);
+	grunt.registerTask('test', [
+		'test_setup', 
+		'statuslog:dev', 
+		'build', 
+		'statuslog:test', 
+		'clean:picked', 
+		'pick', 
+		'nodeunit', 
+		'clean'
+	]);
 
 	// set for testing the workflow
 	grunt.registerTask('test_setup', function () {
@@ -446,7 +485,7 @@ module.exports = function(grunt) {
 		for (branch_src in static_branches) {
 			grunt.log.debug('Building ' + branch_src);
 			branch_dest = static_branches[branch_src];
-			['uglify', 'cssmin', 'processCss', 'imagemin', 'copy'].forEach(function (task) {
+			['closurecompiler', 'cssmin', 'processCss', 'imagemin', 'copy'].forEach(function (task) {
 				// 生成对应的配置段
 				grunt.task.run(['apply', task, branch_src, branch_dest].join(':'));
 			}); 
