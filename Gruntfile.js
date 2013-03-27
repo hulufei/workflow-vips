@@ -399,6 +399,7 @@ module.exports = function(grunt) {
 		'build', 
 		'statuslog:test', 
 		'commitall:test', 
+		'commitall:dev', 
 		'finish'
 	]);
 	// 发布
@@ -606,7 +607,12 @@ module.exports = function(grunt) {
 			project = {name: 'default'};
 		}
 		ChangeLog.project = project;
-		ChangeLog.disabled = false;
+		if (name === 'test') {
+			ChangeLog.disabled = false;
+		}
+		else if (name === 'dev') {
+			ChangeLog.disabled = true;
+		}
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('commit:' + branch);
 		});
