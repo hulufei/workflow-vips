@@ -31,12 +31,12 @@ if not [%6] == [] (
 	set REVISION=%4
 	set Error=%5
 	set BRANCH=%6
-	call grunt hook:postcommit --branch=!BRANCH! --messagefile=!_PATH! --rev=!REVISION! --cwd=!CWD! 1>errorlog.txt 2>&1 >con
+	call grunt hook:postcommit --branch=!BRANCH! --messagefile=!_PATH! --rev=!REVISION! --cwd=!CWD! 1>errorlog.txt 2>&1
 ) else (
 	if not x%%3:%CWD=% == x%%3% (
 		echo Hook Start-commit >con
 		set BRANCH=%3
-		call grunt hook:startcommit --branch=!BRANCH! --cwd=!CWD! 1>errorlog.txt 2>&1 >con
+		call grunt hook:startcommit --branch=!BRANCH! --cwd=!CWD! 1>errorlog.txt 2>&1
 	)
 )
 
@@ -44,6 +44,7 @@ if not [%6] == [] (
 if %errorlevel% gtr 0 (goto err) else exit 0  
 
 :err
+type errorlog.txt >con
 pause > con < con
 echo see errorlog.txt for more information 1>&2
 exit 1
