@@ -281,9 +281,9 @@ module.exports = function(grunt) {
 			// 兼容windows路径
 			cwd = cwd ? cwd.replace(/\\/g, '/') : '';
 			branch = branch.replace(/\\/g, '/');
-			var changelog = project.name + '-CHANGELOG',
-				filepath = '', lines, filePattern,
-				json = {};
+			var changelog = project.name + '-CHANGELOG';
+			var lines = revData.trim().split(grunt.util.linefeed);
+			var filepath = '', filePattern, json = {};
 			grunt.log.debug('Cwd: ' + cwd);
 			grunt.log.debug('Branch: ' + branch);
 			if (grunt.file.exists(changelog)) {
@@ -301,10 +301,9 @@ module.exports = function(grunt) {
 			else {
 				// revData from command line
 				filePattern = /.*\s(.*\/.*\..+)/;
-			}
-			lines = revData.trim().split(grunt.util.linefeed);
-			if (lines.length > 0) {
-				rev = lines[lines.length - 1].match(/\d+/);
+				if (lines.length > 0) {
+					rev = lines[lines.length - 1].match(/\d+/);
+				}
 			}
 			grunt.log.debug('lines: ' + lines);
 			grunt.log.debug('last line: ' + lines[lines.length - 1]);
