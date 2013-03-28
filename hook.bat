@@ -31,11 +31,13 @@ if not [%6] == [] (
 	set REVISION=%4
 	set Error=%5
 	set BRANCH=%6
+	echo Waiting... >con
 	call grunt hook:postcommit --branch=!BRANCH! --messagefile=!_PATH! --rev=!REVISION! --cwd=!CWD! 1>errorlog.txt 2>&1
 ) else (
 	if not x%%3:%CWD=% == x%%3% (
 		echo Hook Start-commit >con
 		set BRANCH=%3
+		echo Building... >con
 		call grunt hook:startcommit --branch=!BRANCH! --cwd=!CWD! 1>errorlog.txt 2>&1
 	)
 )
