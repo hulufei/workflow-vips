@@ -552,8 +552,8 @@ module.exports = function(grunt) {
 		var st_data = grunt.config('_output.st');
 		var st = st_data[branch_src];
 		grunt.log.debug(st);
-		// Process whole branch files
-		if (grunt.option('all')) {
+		// Process whole branch files, except imagemin task
+		if (grunt.option('all') && (task !== 'imagemin')) {
 			grunt.task.run(task);
 		}
 		else if(st && (st.X || st.M || st.A)) {
