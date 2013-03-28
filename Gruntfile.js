@@ -301,9 +301,11 @@ module.exports = function(grunt) {
 			else {
 				// revData from command line
 				filePattern = /.*\s(.*\/.*\..+)/;
-				rev = lines[lines.length - 1].match(/\d+/);
 			}
 			lines = revData.trim().split(grunt.util.linefeed);
+			if (lines.length > 0) {
+				rev = lines[lines.length - 1].match(/\d+/);
+			}
 			grunt.log.debug('lines: ' + lines);
 			grunt.log.debug('last line: ' + lines[lines.length - 1]);
 			grunt.log.debug('rev: ' + rev);
