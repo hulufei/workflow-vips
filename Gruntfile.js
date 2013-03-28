@@ -44,7 +44,7 @@ module.exports = function(grunt) {
 		// 保存输出信息
 		_output: {
 			// 文件状态列表
-			st: {}
+			st: { }
 		},
 
 		// Task configuration.
@@ -267,6 +267,45 @@ module.exports = function(grunt) {
 		project: {},
 		branch: '',
 		disabled: false,
+		//FIXME: possible situation?
+		getStData: function () {
+			var st_data = grunt.config('_output.st');
+			var len = 0, branch;
+			for (branch in st_data) {
+				len += Object.keys(st_data[branch]).length;
+			}
+			grunt.log.debug('getStData: _output.st ->');
+			console.log(st_data);
+			// extract from CHANGELOG
+			if (len === 0) {
+				var project = grunt.config('project');
+				grunt.log.debug('st returns empty, extract from CHANGELOG');
+				var changelog = project.name + '-CHANGELOG';
+				if (!grunt.file.exists(changelog)) {
+					grunt.warn(changelog + ' does not exist!'.red);
+					return {};
+				}
+				var log = grunt.file.readJSON(changelog);
+				grunt.log.debug('changelog:');
+				console.log(log);
+				var files = [], v;
+				for (branch in log) {
+					v = log[branch];
+					if (typeof  v === 'object') {
+						files = files.concat(
+							Object.keys(v).map(function (item) {
+								return 'M ' + item;
+							})
+						);
+						st_data[branch] = st_data[branch] || {};
+						st_data[branch]['M'] = files;
+					}
+				}
+			}
+			grunt.log.debug('extracted st:');
+			console.log(st_data);
+			return st_data;
+		},
 		generate: function (revData, rev) {
 			if (this.disabled) {
 				return;
@@ -301,9 +340,11 @@ module.exports = function(grunt) {
 			else {
 				// revData from command line
 				filePattern = /.*\s(.*\/.*\..+)/;
-				rev = lines[lines.length - 1].match(/\d+/);
 			}
 			lines = revData.trim().split(grunt.util.linefeed);
+			if (lines.length > 0) {
+				rev = lines[lines.length - 1].match(/\d+/);
+			}
 			grunt.log.debug('lines: ' + lines);
 			grunt.log.debug('last line: ' + lines[lines.length - 1]);
 			grunt.log.debug('rev: ' + rev);
@@ -403,18 +444,26 @@ module.exports = function(grunt) {
 		'finish'
 	]);
 	// 发布
-	grunt.registerTask('deploy', [
-		'upall:dev', 
-		'update:build.json', 
-		'statuslog:dev', 
-		'rever', 
-		'build', 
-		'statuslog:test', 
-		'commitall:test', 
-		'clean:picked', 
-		'pick', 
-		'finish'
-	]);
+	// grunt.registerTask('deploy', [
+		// 'upall:dev', 
+		// 'update:build.json', 
+		// 'statuslog:dev', 
+		// 'rever', 
+		// 'build', 
+		// 'statuslog:test', 
+		// 'commitall:test', 
+		// 'clean:picked', 
+		// 'pick', 
+		// 'finish'
+	// ]);
+	grunt.registerTask('deploy', function () {
+		grunt.option('deploy', true);
+		grunt.task.run([
+			'upall:dev', 
+			'statuslog:dev', 
+			'build'
+		]);
+	});
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', [
 		'statuslog:dev', 
@@ -549,7 +598,7 @@ module.exports = function(grunt) {
 		grunt.config('branch_src', branch_src);
 		grunt.config('branch_dest', branch_dest);
 
-		var st_data = grunt.config('_output.st');
+		var st_data = ChangeLog.getStData();
 		var st = st_data[branch_src];
 		grunt.log.debug(st);
 		// Process whole branch files, except imagemin task
@@ -662,7 +711,7 @@ module.exports = function(grunt) {
 	 * 如果有更改(M)的图片，对应build.json字段版本号+0.1
 	 */
 	grunt.registerTask('rever', function () {
-		var st_data = grunt.config('_output.st');
+		var st_data = ChangeLog.getStData();
 		var st_M = [], imgfiles, cssfiles;
 		// keys to be re-version
 		var dict_rev = {};
