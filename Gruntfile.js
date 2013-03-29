@@ -163,7 +163,7 @@ module.exports = function(grunt) {
 		},
 		shell: {
 			commit: {
-				command: 'svn commit -m "' + grunt.option('m') + '" <%= branch_dest %>',
+				command: 'svn commit -m "' + (grunt.option('m') || "<%= _msg %>") + '" <%= branch_dest %>',
 				options: {
 					stdout: true,
 					callback: function (err, stdout, stderr, cb) {
@@ -748,7 +748,7 @@ module.exports = function(grunt) {
 			if (!grunt.option('test')) {
 				grunt.file.write('build.json', JSON.stringify(buildConfig, null, 4));
 				ChangeLog.disabled = true;
-				grunt.option('m', 'update: ' + revs_log.join(','));
+				grunt.config('_msg', 'update: ' + revs_log.join(','));
 				grunt.task.run('commit:build.json');
 			}
 		}
