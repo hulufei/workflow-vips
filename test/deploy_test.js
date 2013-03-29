@@ -44,8 +44,8 @@ exports.deploy = {
 	},
 	pick: function (test) {
 		var dist = grunt.config('clean.picked');
-		test.ok(!grunt.file.exists(dist + '/added.js'), 'should ignore the added js in dev branch');
-		test.ok(grunt.file.exists(dist + '/unchanged.css'), 'should pick the unchanged css in changelog');
+		test.ok(!grunt.file.exists(dist + '/js/public/added.js'), 'should ignore the added js in dev branch');
+		test.ok(grunt.file.exists(dist + '/css/public/unchanged.css'), 'should pick the unchanged css in changelog');
 		test.done();
 	}
 };
