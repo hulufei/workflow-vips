@@ -746,8 +746,9 @@ module.exports = function(grunt) {
 			grunt.config('buildConfig', buildConfig);
 			// don't write to file when run in unit test
 			if (!grunt.option('test')) {
-				grunt.file.write('build.json', buildConfig);
+				grunt.file.write('build.json', JSON.stringify(buildConfig, null, 4));
 				ChangeLog.disabled = true;
+				grunt.option('m', 'update: ' + revs_log.join(','));
 				grunt.task.run('commit:build.json');
 			}
 		}
