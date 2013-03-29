@@ -773,10 +773,10 @@ module.exports = function(grunt) {
 				var filelist = st_data[branch];
 				if (typeof filelist === 'object') {
 					for (var filepath in filelist) {
-						grunt.log.debug('src:' + path.join(branch, filepath));
-						var filename = path.basename(filepath);
 						var src = path.join(branch, filepath);
-						var dest = path.join(dist, filename);
+						var dest = path.join(dist, filepath);
+						grunt.log.debug('src:' + src);
+						grunt.log.debug('dest:' + dest);
 						grunt.file.copy(src, dest);
 					}
 				}
