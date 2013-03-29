@@ -556,25 +556,19 @@ module.exports = function(grunt) {
 	grunt.registerMultiTask('processCss', 'replace variables in CSS', function () {
 		var options =  this.options({
 			imgDomain: '',
-			version: grunt.config('buildConfig')
+			versions: grunt.config('buildConfig')
 		});
 		var imgDomain = options.imgDomain,
-				version = options.version;
+				versions = options.versions;
 		var variablePattern = /\{\$.*?\}/;
 		variablePattern.compile(variablePattern);
 		function process(filepath) {
 			if (grunt.file.exists(filepath) && grunt.file.isFile(filepath)) {
-				var css = grunt.file.read(filepath)
-					.replace(/\{\$imgDomain\}|\{\$staticImg\}/gm, imgDomain)
-					.replace(/\{\$staticVer\}/gm, version.staticVer)
-					.replace(/\{\$shopImgVer\}/gm, version.shopImgVer)
-					.replace(/\{\$dayImgVer\}/gm, version.dayImgVer)
-					.replace(/\{\$luxImgVer\}/gm, version.luxImgVer)
-					.replace(/\{\$tourImgVer\}/gm, version.tourImgVer)
-					.replace(/\{\$goodsImgVer\}/gm, version.goodsImgVer)
-					.replace(/\{\$mallImgVer\}/gm, version.mallImgVer)
-					.replace(/\{\$cardImgVer\}/gm, version.cardImgVer);
-					//.replace(/\{\$.*?Ver\}/gm, version);
+				var css = grunt.file.read(filepath).replace(/\{\$imgDomain\}|\{\$staticImg\}/gm, imgDomain);
+				for (var param in versions) {
+					var pattern = new RegExp('\\{\\$' + param + '\\}', 'gm');
+					css = css.replace(pattern, versions[param]);
+				}
 
 				// check if all variables are replaced
 				if (variablePattern.test(css)) {
