@@ -2,14 +2,11 @@
 	"name": "name",
 	"description": "about project",
 	"branches": {
-		"base": "branches/dir",
+		"base": "65",
 		"tpl": {
-			"tpl-1": "tpl-1-test",
-			"tpl-2": "tpl-2-test"
 		},
 		"static": {
-			"static-1": "static-1-test",
-			"static-2": "static-2-test"
+			"demo": "demo-test"
 		}
 	}
 }

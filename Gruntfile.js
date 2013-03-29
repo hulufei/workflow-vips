@@ -737,7 +737,6 @@ module.exports = function(grunt) {
 			for (var k in dict_rev) {
 				var ver = buildConfig[k];
 				var v = parseFloat(ver);
-				console.log('v: ' + v);
 				if (v) {
 					buildConfig[k] = (v + 0.1).toFixed(2);
 					revs_log.push(k + ': ' + ver.green + ' -> ' + buildConfig[k].green);
