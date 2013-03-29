@@ -755,10 +755,15 @@ module.exports = function(grunt) {
 	grunt.registerTask('pick', function () {
 		var dist = grunt.config('clean.picked');
 		var project = grunt.config('_project');
+		var dev_branches = grunt.config('_branches').getAll('dev');
 		var changelog = project.name + '-CHANGELOG';
 		if (grunt.file.exists(changelog)) {
 			var st_data = grunt.file.readJSON(changelog);
 			for (var branch in st_data) {
+				if (dev_branches.indexOf(branch) > -1) {
+					// ignore the dev branch
+					continue;
+				}
 				var filelist = st_data[branch];
 				if (typeof filelist === 'object') {
 					for (var filepath in filelist) {
