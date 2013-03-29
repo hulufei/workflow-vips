@@ -44,7 +44,7 @@ module.exports = function(grunt) {
 		// 保存输出信息
 		_output: {
 			// 文件状态列表
-			st: {}
+			st: { }
 		},
 
 		// Task configuration.
@@ -231,7 +231,8 @@ module.exports = function(grunt) {
 			picked: 'picked-dist'
 		},
 		nodeunit: {
-			tests: ['test/*_test.js']
+			build: ['test/build_test.js'],
+			deploy: ['test/deploy_test.js']
 		},
 
 		// TODO
@@ -264,9 +265,44 @@ module.exports = function(grunt) {
 	 * err: svn返回的错误信息
 	 */
 	var ChangeLog = {
-		project: {},
+		// must be normalized project config
+		project: '', 
 		branch: '',
 		disabled: false,
+		extractStatus: function () {
+			var st_data = grunt.option('_output.st') || {};
+			if (Object.keys(st_data).length > 0) {
+				return st_data;
+			}
+			var project = this.project || grunt.config('_project');
+			var name = project.name + '-CHANGELOG';
+			if (!grunt.file.exists(name)) {
+				grunt.warn(name + ' does not exist!'.red);
+			}
+			else {
+				var changelog = grunt.file.readJSON(name);
+				var dev_branches = grunt.config('_branches').getAll('dev');
+				var files = [], v, branch;
+				for (branch in changelog) {
+					if (dev_branches.indexOf(branch) === -1) {
+						// ignore test branch
+						continue;
+					}
+					v = changelog[branch];
+					if (typeof  v === 'object') {
+						files = files.concat(
+							Object.keys(v).map(function (item) {
+								return 'M ' + path.join(branch, item);
+							})
+						);
+						st_data[branch] = st_data[branch] || {};
+						st_data[branch]['M'] = files;
+					}
+				}
+			}
+			grunt.config('_output.st', st_data);
+			return st_data;
+		},
 		generate: function (revData, rev) {
 			if (this.disabled) {
 				return;
@@ -400,20 +436,15 @@ module.exports = function(grunt) {
 		'build', 
 		'statuslog:test', 
 		'commitall:test', 
+		'commitall:dev', 
 		'finish'
 	]);
 	// 发布
 	grunt.registerTask('deploy', [
 		'upall:dev', 
-		'update:build.json', 
-		'statuslog:dev', 
-		'rever', 
-		'build', 
-		'statuslog:test', 
-		'commitall:test', 
-		'clean:picked', 
-		'pick', 
-		'finish'
+		'rever',
+		'build:changelog',
+		'pick'
 	]);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', [
@@ -427,12 +458,13 @@ module.exports = function(grunt) {
 	// unit test
 	grunt.registerTask('test', [
 		'test_setup', 
+		'clean:test',
 		'statuslog:dev', 
 		'build', 
-		'statuslog:test', 
-		'clean:picked', 
-		'pick', 
-		'nodeunit', 
+		'nodeunit:build', 
+		'clean:test',
+		'deploy',
+		'nodeunit:deploy',
 		'clean'
 	]);
 
@@ -445,7 +477,8 @@ module.exports = function(grunt) {
 		grunt.config('build', build);
 		grunt.file.copy('test/' + changelog, changelog);
 		var branches = preprocess('project');
-		grunt.config('clean.test', branches.getAll('test').concat(changelog));
+		grunt.config('clean.test', branches.getAll('test'));
+		grunt.config('clean.log', [changelog]);
 	});
 
 	// 建立watch任务，对应分支做jshint，csslint
@@ -473,20 +506,39 @@ module.exports = function(grunt) {
 		});
 	});
 
-	// build task
-	grunt.registerTask('build', function () {
+	/**
+	 * build task
+	 * @param {String} target
+	 *	"all": build all branches in project.json(default)
+	 *	"noimage": build all except images
+	 *	"changelog": build files in changelog file
+	 */
+	grunt.registerTask('build', function (target) {
 		preprocess('project');
 		var project = grunt.config('_project');
 		var static_branches = project.branches['static'] || {},
 				tpl_branches = project.branches['tpl'] || {},
 				branch_src = '',
 				branch_dest = '';
+		var build_tasks = ['closurecompiler', 'cssmin', 'processCss', 'imagemin', 'copy'];
+
+		if (target === 'changelog') {
+			ChangeLog.project = project;
+			ChangeLog.extractStatus();
+		}
+		else if (target === 'noimage') {
+			grunt.option('all', true);
+			// exclude imagemin task(too many images)
+			build_tasks = build_tasks.filter(function (t) {
+				return (t !== 'imagemin' && t !== 'copy');
+			});
+		}
 
 		// 对应静态资源分支的处理
 		for (branch_src in static_branches) {
 			grunt.log.debug('Building ' + branch_src);
 			branch_dest = static_branches[branch_src];
-			['closurecompiler', 'cssmin', 'processCss', 'imagemin', 'copy'].forEach(function (task) {
+			build_tasks.forEach(function (task) {
 				// 生成对应的配置段
 				grunt.task.run(['apply', task, branch_src, branch_dest].join(':'));
 			}); 
@@ -549,10 +601,11 @@ module.exports = function(grunt) {
 		grunt.config('branch_src', branch_src);
 		grunt.config('branch_dest', branch_dest);
 
+		// var st_data = ChangeLog.getStData();
 		var st_data = grunt.config('_output.st');
 		var st = st_data[branch_src];
 		grunt.log.debug(st);
-		// Process whole branch files
+		// Process whole branch
 		if (grunt.option('all')) {
 			grunt.task.run(task);
 		}
@@ -607,6 +660,7 @@ module.exports = function(grunt) {
 			project = {name: 'default'};
 		}
 		ChangeLog.project = project;
+		// log both dev and test branches
 		ChangeLog.disabled = false;
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('commit:' + branch);
@@ -657,7 +711,7 @@ module.exports = function(grunt) {
 	 * 如果有更改(M)的图片，对应build.json字段版本号+0.1
 	 */
 	grunt.registerTask('rever', function () {
-		var st_data = grunt.config('_output.st');
+		var st_data = ChangeLog.extractStatus();
 		var st_M = [], imgfiles, cssfiles;
 		// keys to be re-version
 		var dict_rev = {};
@@ -700,7 +754,7 @@ module.exports = function(grunt) {
 	 */
 	grunt.registerTask('pick', function () {
 		var dist = grunt.config('clean.picked');
-		var project = grunt.config('project');
+		var project = grunt.config('_project');
 		var changelog = project.name + '-CHANGELOG';
 		if (grunt.file.exists(changelog)) {
 			var st_data = grunt.file.readJSON(changelog);
@@ -716,6 +770,9 @@ module.exports = function(grunt) {
 					}
 				}
 			}
+		}
+		else {
+			grunt.fatal(changelog + ' does not found!', 1);
 		}
 		grunt.config('_output.picked_dist', dist);
 	});
@@ -835,7 +892,7 @@ module.exports = function(grunt) {
 		if (action === 'startcommit') {
 			grunt.task.run(['statuslog:dev', 'build']);
 		}
-		else if (!isDev && action === 'postcommit') {
+		else if (action === 'postcommit') {
 			var messagefile = grunt.option('messagefile');
 			var revData = grunt.file.read(messagefile);
 			revData = revData.split(grunt.util.linefeed).map(function (line) {
@@ -853,9 +910,7 @@ module.exports = function(grunt) {
 
 	// for debug
 	grunt.registerTask('debug', function () {
-		var m = 'branches/demo/css/test.css';
-		var fs = grunt.file.match(['**/*.css'], m);
-		console.log(path.basename(m));
-		console.log(fs);
+		var t = {a: 1};
+		grunt.log.debug(t);
 	});
 };

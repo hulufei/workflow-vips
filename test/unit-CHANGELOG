@@ -2,6 +2,12 @@
 	"description": "test pick",
 	"test/test-branches/static-a": {
 			"css/added.css": "r1859",
-			"js/added.js": "r1859"
+			"js/added.js": "r1859",
+			"css/unchanged.css": "r1859",
+			"js/unchanged.js": "r1859"
+	},
+	"test/test-branches/static-a-test": {
+			"css/public/unchanged.css": "r1859",
+			"js/public/unchanged.js": "r1859"
 	}
 }

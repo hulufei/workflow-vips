@@ -94,28 +94,3 @@ exports.build = {
 		test.done();
 	}
 };
-
-exports.pick = {
-	main: function (test) {
-		var dist = grunt.config('clean.picked');
-		test.ok(grunt.file.exists(dist + '/added.js'), 'should pick the added js');
-		test.ok(grunt.file.exists(dist + '/added.css'), 'should pick the added css');
-		test.done();
-	}
-};
-
-console.log(grunt.config('_output.st'));
-// backup st data
-// var st = { 'test/test-branches/tpl-a': { X: [ '?       test/test-branches/tpl-a/views/new.html' ] },
-  // 'test/test-branches/static-a': 
-   // { X: 
-      // [ '?       test/test-branches/static-a/css/public/new.css',
-        // '?       test/test-branches/static-a/css/public/vars.css',
-        // '?       test/test-branches/static-a/js/public/new.js',
-        // '?       test/test-branches/static-a/img/loading.gif',
-        // '?       test/test-branches/static-a/img/optimize-png-test.png',
-        // '?       test/test-branches/static-a/img/res/october.swf',
-        // '?       test/test-branches/static-a/img/optimize-jpg-test.jpg' ],
-     // M: 
-      // [ 'M       test/test-branches/static-a/css/public/modified.css',
-        // 'M       test/test-branches/static-a/js/public/modified.js' ] } };
