@@ -1,0 +1,8 @@
+.revver {
+	color: #000;
+	background: url({$imgDomain}/rever.png?{$staticVer}) no-repeat;
+}
+.unrevver {
+	color: #fff;
+	background: url({$imgDomain}/unrever.png?{$mallImgVer}) no-repeat;
+}

@@ -439,12 +439,13 @@ module.exports = function(grunt) {
 		'commitall:dev', 
 		'finish'
 	]);
-	// 发布
+	// 发布, NOTE: BASED ON CHANGELOG
 	grunt.registerTask('deploy', [
 		'upall:dev', 
 		'rever',
 		'build:changelog',
-		'pick'
+		'pick',
+		'finish'
 	]);
 	// 不依赖网络，可供预览更改
 	grunt.registerTask('taste', [
@@ -478,7 +479,8 @@ module.exports = function(grunt) {
 		grunt.file.copy('test/' + changelog, changelog);
 		var branches = preprocess('project');
 		grunt.config('clean.test', branches.getAll('test'));
-		grunt.config('clean.log', [changelog]);
+		grunt.config('clean.config', [changelog]);
+		grunt.option('test', true);
 	});
 
 	// 建立watch任务，对应分支做jshint，csslint
@@ -702,7 +704,8 @@ module.exports = function(grunt) {
 	});
 
 	/* update versions
-	 * 如果有更改(M)的图片，对应build.json字段版本号+0.1
+	 * 如果有更改(M)的图片，并且更改的css里引用了图片
+	 * 对应build.json字段版本号+0.1
 	 */
 	grunt.registerTask('rever', function () {
 		var st_data = ChangeLog.extractStatus();
@@ -710,35 +713,44 @@ module.exports = function(grunt) {
 		// keys to be re-version
 		var dict_rev = {};
 		for (var branch in st_data) {
-			st_M = st_M.concat(st_data[branch].M || []);
+			st_M = st_M.concat(st_data[branch].M || []).map(function (st) {
+				return st.match(/\s+(.+)/)[1];
+			});
 		}
 		imgfiles = grunt.file.match(['**/*.{jpg,jpeg,png,gif}'], st_M);
 		if (imgfiles.length > 0) {
 			cssfiles = grunt.file.match(['**/*.css'], st_M);
-			imgfiles.forEach(function (imgfile) {
-				var name = path.basename(imgfile);
+			imgfiles.forEach(function (filename) {
+				var imgfile = path.basename(filename);
 				cssfiles.forEach(function (cssfile) {
-					var pattern = new RegExp(name + '\\?\\{\\$(.+)\\}');
+					var pattern = new RegExp(imgfile + '\\?\\{\\$(.+)\\}');
 					var matches = grunt.file.read(cssfile).match(pattern);
 					if (matches) {
 						dict_rev[matches[1]] = true;
+						grunt.log.writeln('Find ' + imgfile.green + ' in ' + cssfile.green);
+						grunt.log.writeln('-------> ' + matches[1]).green;
 					}
 				});
 			});
 			var buildConfig = grunt.config('buildConfig');
-			var revs = [];
+			var revs_log = [];
 			for (var k in dict_rev) {
-				var v = parseFloat(buildConfig[k]);
+				var ver = buildConfig[k];
+				var v = parseFloat(ver);
+				console.log('v: ' + v);
 				if (v) {
-					buildConfig[k] = v + 0.1;
-					revs.push(k.green + ': ' + v.green + ' -> ' + buildConfig[k].green);
+					buildConfig[k] = (v + 0.1).toFixed(2);
+					revs_log.push(k + ': ' + ver.green + ' -> ' + buildConfig[k].green);
 				}
 			}
-			grunt.config('_output.revs', revs);
+			grunt.config('_output.revs', revs_log);
 			grunt.config('buildConfig', buildConfig);
-			grunt.file.write('build.json', buildConfig);
-			ChangeLog.disabled = true;
-			grunt.task.run('commit:build.json');
+			// don't write to file when run in unit test
+			if (!grunt.option('test')) {
+				grunt.file.write('build.json', buildConfig);
+				ChangeLog.disabled = true;
+				grunt.task.run('commit:build.json');
+			}
 		}
 	});
 
@@ -909,7 +921,8 @@ module.exports = function(grunt) {
 
 	// for debug
 	grunt.registerTask('debug', function () {
-		var t = {a: 1};
-		grunt.log.debug(t);
+		var st_M = ['M test/test-branches/static-a/css/added.png'];
+		var imgfiles = grunt.file.match(['**/*.{jpg,jpeg,png,gif}'], st_M);
+		console.log(imgfiles);
 	});
 };
