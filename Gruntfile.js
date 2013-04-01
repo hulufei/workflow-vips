@@ -238,8 +238,6 @@ module.exports = function(grunt) {
 		// TODO
 		// 映射dev-test，任何在dev中删除文件的操作都映射到test中
 		mirror: {},
-		// 根据修改的图片文件自动更新版本号
-		updateVer: {}
 	});
 
 	// These plugins provide necessary tasks.
@@ -258,12 +256,7 @@ module.exports = function(grunt) {
 	// load all grunt tasks
 	//require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
-
-	/*
-	 * 自动生成更改文件列表: projectname-changelog
-	 * revData: svn提交返回的信息
-	 * err: svn返回的错误信息
-	 */
+	// Handle the CHANGELOG file
 	var ChangeLog = {
 		// must be normalized project config
 		project: '', 
@@ -303,6 +296,11 @@ module.exports = function(grunt) {
 			grunt.config('_output.st', st_data);
 			return st_data;
 		},
+		/*
+		 * 自动生成更改文件列表: projectname-changelog
+		 * revData: svn提交返回的信息
+		 * err: svn返回的错误信息
+		 */
 		generate: function (revData, rev) {
 			if (this.disabled) {
 				return;
@@ -371,7 +369,7 @@ module.exports = function(grunt) {
 		}
 	};
 
-	/* 在push之前做一些预处理
+	/* Normalize project config 
 	 * Check project config
 	 * Set internal configs
 	 */
@@ -610,7 +608,7 @@ module.exports = function(grunt) {
 			grunt.task.run(task);
 		}
 		else if(st && (st.X || st.M || st.A)) {
-			// Only process the added, changed or the new files(X, M, A)
+			// Only process the new, changed or the added files(X, M, A)
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
 			var patterns = grunt.config(task).vips.src;
