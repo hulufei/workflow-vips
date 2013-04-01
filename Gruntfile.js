@@ -388,7 +388,7 @@ module.exports = function(grunt) {
 		}
 
 		// join branches
-		var joined_branches = project.branches,
+		var joined_branches = {},
 				base = project.branches['base'];
 		if (base) {
 			['static', 'tpl'].forEach(function (k) {
@@ -403,7 +403,6 @@ module.exports = function(grunt) {
 					joined_branches[k][src] = des;
 				}
 			});
-			joined_branches.base = '';
 			project.branches = joined_branches;
 		}
 
@@ -675,6 +674,7 @@ module.exports = function(grunt) {
 	// Log file status of specified branches(dev/test)
 	grunt.registerTask('statuslog', function (name) {
 		var branches = preprocess('project');
+		console.log(branches);
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('st:' + branch);
 		});
@@ -761,7 +761,7 @@ module.exports = function(grunt) {
 	 */
 	grunt.registerTask('pick', function () {
 		var project = grunt.config('_project');
-		var dist = project.branches.release || 'picked-dist';
+		var dist = grunt.config('project.branches.release') || 'picked-dist';
 		console.log('dist: ' + dist);
 		var dev_branches = grunt.config('_branches').getAll('dev');
 		var changelog = project.name + '-CHANGELOG';
