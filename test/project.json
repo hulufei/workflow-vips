@@ -2,6 +2,7 @@
 	"name": "unit",
 	"description": "unit tests",
 	"branches": {
+		"release": "179-svn",
 		"base": "test/test-branches",
 		"tpl": {"tpl-a": "tpl-a-test"},
 		"static": {

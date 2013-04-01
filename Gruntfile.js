@@ -227,9 +227,6 @@ module.exports = function(grunt) {
 				}
 			}
 		},
-		clean: {
-			picked: 'picked-dist'
-		},
 		nodeunit: {
 			build: ['test/build_test.js'],
 			deploy: ['test/deploy_test.js']
@@ -391,7 +388,7 @@ module.exports = function(grunt) {
 		}
 
 		// join branches
-		var joined_branches = {},
+		var joined_branches = project.branches,
 				base = project.branches['base'];
 		if (base) {
 			['static', 'tpl'].forEach(function (k) {
@@ -406,6 +403,7 @@ module.exports = function(grunt) {
 					joined_branches[k][src] = des;
 				}
 			});
+			joined_branches.base = '';
 			project.branches = joined_branches;
 		}
 
@@ -478,6 +476,7 @@ module.exports = function(grunt) {
 		var branches = preprocess('project');
 		grunt.config('clean.test', branches.getAll('test'));
 		grunt.config('clean.config', [changelog]);
+		grunt.config('clean.picked', [project.branches.release]);
 		grunt.option('test', true);
 	});
 
@@ -761,8 +760,9 @@ module.exports = function(grunt) {
 	 * 文件列表来源于changelog文件
 	 */
 	grunt.registerTask('pick', function () {
-		var dist = grunt.config('clean.picked');
 		var project = grunt.config('_project');
+		var dist = project.branches.release || 'picked-dist';
+		console.log('dist: ' + dist);
 		var dev_branches = grunt.config('_branches').getAll('dev');
 		var changelog = project.name + '-CHANGELOG';
 		if (grunt.file.exists(changelog)) {
@@ -923,8 +923,6 @@ module.exports = function(grunt) {
 
 	// for debug
 	grunt.registerTask('debug', function () {
-		var st_M = ['M test/test-branches/static-a/css/added.png'];
-		var imgfiles = grunt.file.match(['**/*.{jpg,jpeg,png,gif}'], st_M);
-		console.log(imgfiles);
+		console.log(grunt.config('picked'));
 	});
 };

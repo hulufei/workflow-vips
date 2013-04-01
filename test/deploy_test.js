@@ -43,7 +43,8 @@ exports.deploy = {
 		test.done();
 	},
 	pick: function (test) {
-		var dist = grunt.config('clean.picked');
+		var dist = grunt.config('_project.branches.release');
+		test.equal('179-svn', dist, 'picked dist should remain in normalized project: _project');
 		test.ok(!grunt.file.exists(dist + '/js/public/added.js'), 'should ignore the added js in dev branch');
 		test.ok(grunt.file.exists(dist + '/css/public/unchanged.css'), 'should pick the unchanged css in changelog');
 		test.done();
