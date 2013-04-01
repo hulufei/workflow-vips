@@ -511,7 +511,8 @@ module.exports = function(grunt) {
 	/**
 	 * build task
 	 * @param {String} target
-	 *	"all": build all branches in project.json(default)
+	 *	none: build changed files(default)
+	 *	"all": build all branches in project.json
 	 *	"noimage": build all except images
 	 *	"changelog": build files in changelog file
 	 */
