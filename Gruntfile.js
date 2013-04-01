@@ -529,6 +529,9 @@ module.exports = function(grunt) {
 			ChangeLog.project = project;
 			ChangeLog.extractStatus();
 		}
+		else if (target === 'all') {
+			grunt.option('all', true);
+		}
 		else if (target === 'noimage') {
 			grunt.option('all', true);
 			// exclude imagemin task(too many images)
