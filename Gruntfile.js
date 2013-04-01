@@ -437,6 +437,7 @@ module.exports = function(grunt) {
 	// 发布, NOTE: BASED ON CHANGELOG
 	grunt.registerTask('deploy', [
 		'upall:dev', 
+		'update:build.json',
 		'rever',
 		'build:changelog',
 		'pick',
@@ -674,7 +675,6 @@ module.exports = function(grunt) {
 	// Log file status of specified branches(dev/test)
 	grunt.registerTask('statuslog', function (name) {
 		var branches = preprocess('project');
-		console.log(branches);
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('st:' + branch);
 		});
@@ -724,7 +724,7 @@ module.exports = function(grunt) {
 			imgfiles.forEach(function (filename) {
 				var imgfile = path.basename(filename);
 				cssfiles.forEach(function (cssfile) {
-					var pattern = new RegExp(imgfile + '\\?\\{\\$(.+)\\}');
+					var pattern = new RegExp(imgfile + '\\?\\{\\$(.+?)\\}');
 					var matches = grunt.file.read(cssfile).match(pattern);
 					if (matches) {
 						dict_rev[matches[1]] = true;
@@ -762,7 +762,6 @@ module.exports = function(grunt) {
 	grunt.registerTask('pick', function () {
 		var project = grunt.config('_project');
 		var dist = grunt.config('project.branches.release') || 'picked-dist';
-		console.log('dist: ' + dist);
 		var dev_branches = grunt.config('_branches').getAll('dev');
 		var changelog = project.name + '-CHANGELOG';
 		if (grunt.file.exists(changelog)) {
