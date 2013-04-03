@@ -658,7 +658,7 @@ module.exports = function(grunt) {
 		}
 		ChangeLog.project = project;
 		// log both dev and test branches
-		ChangeLog.disabled = grunt.option('all') ? true : false;
+		ChangeLog.disabled = false;
 		branches.getAll(name).map(function (branch) {
 			grunt.task.run('commit:' + branch);
 		});
