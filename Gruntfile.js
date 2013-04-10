@@ -313,7 +313,7 @@ module.exports = function(grunt) {
 			cwd = cwd ? cwd.replace(/\\/g, '/') : '';
 			branch = branch.replace(/\\/g, '/');
 			var changelog = project.name + '-CHANGELOG';
-			var lines = revData.trim().split(grunt.util.linefeed);
+			var lines = revData ? revData.trim().split(grunt.util.linefeed) : [];
 			var filepath = '', filePattern, json = {};
 			grunt.log.debug('Cwd: ' + cwd);
 			grunt.log.debug('Branch: ' + branch);
@@ -336,30 +336,38 @@ module.exports = function(grunt) {
 					rev = lines[lines.length - 1].match(/\d+/);
 				}
 			}
-			grunt.log.debug('lines: ' + lines);
-			grunt.log.debug('last line: ' + lines[lines.length - 1]);
-			grunt.log.debug('rev: ' + rev);
-			filePattern.compile(filePattern);
-			lines.map(function (line) {
-				// 兼容windows文件路径
-				line = line.replace(cwd, '').replace(/\\/g, '/');
-				var match = line.match(filePattern);
-				if (match) {
-					grunt.log.debug('file matches: ' + match);
-					filepath = match[1].replace(branch + '/', '').trim();
-					json[branch] = json[branch] || {};
-					json[branch][filepath] = 'r' + rev;
-				}
-			});
-			// 如果有删除的文件更改，标注为'D'
-			var st_data = grunt.config('_output.st');
-			if (st_data.D) {
-				st_data.D.map(function (line) {
-					filepath = line.match(filePattern)[1].replace(branch + '/', '').trim();
-					grunt.log.debug('Deleted file: ' + filepath);
-					json[branch][filepath] = 'D';
+			if (lines.length > 0) {
+				grunt.log.debug('lines: ' + lines);
+				grunt.log.debug('last line: ' + lines[lines.length - 1]);
+				grunt.log.debug('rev: ' + rev);
+				filePattern.compile(filePattern);
+				lines.map(function (line) {
+					// 兼容windows文件路径
+					line = line.replace(cwd, '').replace(/\\/g, '/');
+					var match = line.match(filePattern);
+					if (match) {
+						grunt.log.debug('file matches: ' + match);
+						filepath = match[1].replace(branch + '/', '').trim();
+						json[branch] = json[branch] || {};
+						json[branch][filepath] = 'r' + rev;
+					}
 				});
+				// 如果有删除的文件更改，标注为'D'
+				var st_data = grunt.config('_output.st');
+				if (st_data.D) {
+					st_data.D.map(function (line) {
+						filepath = line.match(filePattern)[1].replace(branch + '/', '').trim();
+						grunt.log.debug('Deleted file: ' + filepath);
+						json[branch][filepath] = 'D';
+					});
+				}
 			}
+			else {
+				// generate an empty template CHANGELOG file
+				json[branch] = json[branch] || {};
+				json[branch]['fake/path'] = 'r0';
+			}
+
 			grunt.file.write(changelog, JSON.stringify(json, null, 4));
 			grunt.config('_output.changelog', json);
 			//grunt.log.writeln('Changelog generated: ' + changelog);
@@ -918,6 +926,17 @@ module.exports = function(grunt) {
 			ChangeLog.disabled = false;
 			ChangeLog.generate(revData, rev);
 		}
+	});
+
+	// Generate template change log file
+	grunt.registerTask('tcl', function () {
+		var branches = preprocess('project');
+		var project = grunt.config('_project');
+		ChangeLog.project = project;
+		branches.getAll('dev').forEach(function (branch) {
+			ChangeLog.branch = branch;
+			ChangeLog.generate();
+		});
 	});
 
 	// for debug
