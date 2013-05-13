@@ -204,7 +204,7 @@ module.exports = function(grunt) {
 						st_data[branch] = st_data[branch] || {};
 						if (lines.length > 1) {
 							lines.map(function (line) {
-								['A', 'M', 'C', 'D', '\\?'].map(function (st) {
+								['A', 'M', 'C', 'D', 'R', '\\?'].map(function (st) {
 									// Note: match filepath pattern: /.*\s(.*)/
 									var pattern = new RegExp('^' + st + '.*');
 									var matches = line.match(pattern);
@@ -516,7 +516,7 @@ module.exports = function(grunt) {
 	/**
 	 * build task
 	 * @param {String} target
-	 *	none: build changed files(default)
+	 *	none: build changed files(require statuslog:dev)
 	 *	"all": build all branches in project.json
 	 *	"noimage": build all except images
 	 *	"changelog": build files in changelog file
@@ -609,12 +609,16 @@ module.exports = function(grunt) {
 		// var st_data = ChangeLog.getStData();
 		var st_data = grunt.config('_output.st');
 		var st = st_data[branch_src];
+		var st_list = [];
 		grunt.log.debug(st);
+		['X', 'M', 'A', 'R'].forEach(function(mark) {
+			st_list = st_list.concat(st[mark] || []);
+		});
 		// Process whole branch
 		if (grunt.option('all')) {
 			grunt.task.run(task);
 		}
-		else if(st && (st.X || st.M || st.A)) {
+		else if(st && st_list.length > 0) {
 			// Only process the new, changed or the added files(X, M, A)
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
@@ -626,9 +630,11 @@ module.exports = function(grunt) {
 			}
 			cwd = cwd ? cwd.replace(/\\/g, '/') : '';
 			grunt.log.debug('replace cwd:' + cwd);
-			var filePattern = /\s+(.+)/;
-			var st_list = (st['X'] || []).concat(st.M || []).concat(st.A || []);
+			// FIXME: handle the file path with spaces
+			var filePattern = /.*\s+(.+)/;
 			var filepaths = st_list.map(function (st) {
+				grunt.log.debug('st: ');
+				grunt.log.debug(st);
 				var match = st.match(filePattern);
 				if (match) {
 					// 兼容windows文件路径，删除文件路径开头的斜杠
@@ -813,13 +819,14 @@ module.exports = function(grunt) {
 		var output = grunt.config('_output');
 		var st_data = output.st;
 		// X: new files, M: modified files, A: added files
-		var st_X = [], st_M = [], st_A = [];
+		var st_X = [], st_M = [], st_A = [], st_R = [];
 		var test_branches = branches.getAll('test');
 		for (var branch in st_data) {
 			if (test_branches.indexOf(branch) > -1) {
 				st_X = st_X.concat(st_data[branch].X || []);
 				st_M = st_M.concat(st_data[branch].M || []);
 				st_A = st_A.concat(st_data[branch].A || []);
+				st_R = st_A.concat(st_data[branch].R || []);
 			}
 		}
 		if (st_M.length > 0 && !grunt.file.exists(changelog)) {
@@ -829,6 +836,10 @@ module.exports = function(grunt) {
 		if (st_A.length > 0 && !grunt.file.exists(changelog)) {
 			grunt.log.warn('A _ A 新增的文件：');
 			grunt.log.writeln(st_A.join(grunt.util.linefeed));
+		}
+		if (st_R.length > 0 && !grunt.file.exists(changelog)) {
+			grunt.log.warn('R _ R 替换的文件：');
+			grunt.log.writeln(st_R.join(grunt.util.linefeed));
 		}
 		if (st_X.length > 0) {
 			grunt.log.warn('? _ ? 你可能还遗漏了这些文件:');
