@@ -239,7 +239,7 @@ module.exports = function(grunt) {
 
 	// These plugins provide necessary tasks.
 	grunt.loadNpmTasks('grunt-contrib-copy');
-	// grunt.loadNpmTasks('grunt-contrib-uglify');
+	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-cssmin');
 	grunt.loadNpmTasks('grunt-contrib-imagemin');
 	grunt.loadNpmTasks('grunt-contrib-clean');
@@ -528,7 +528,8 @@ module.exports = function(grunt) {
 				tpl_branches = project.branches['tpl'] || {},
 				branch_src = '',
 				branch_dest = '';
-		var build_tasks = ['closurecompiler', 'cssmin', 'processCss', 'imagemin', 'copy'];
+		var jscompiler = grunt.option('uglify') ? 'uglify' : 'closurecompiler';
+		var build_tasks = [jscompiler, 'cssmin', 'processCss', 'imagemin', 'copy'];
 
 		if (target === 'changelog') {
 			ChangeLog.project = project;
