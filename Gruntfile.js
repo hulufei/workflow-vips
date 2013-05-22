@@ -606,6 +606,12 @@ module.exports = function(grunt) {
 		grunt.config('branch_src', branch_src);
 		grunt.config('branch_dest', branch_dest);
 
+		// Process whole branch
+		if (grunt.option('all')) {
+			grunt.task.run(task);
+			return;
+		}
+
 		// var st_data = ChangeLog.getStData();
 		var st_data = grunt.config('_output.st');
 		var st = st_data[branch_src];
@@ -614,11 +620,7 @@ module.exports = function(grunt) {
 		['X', 'M', 'A', 'R'].forEach(function(mark) {
 			st_list = st_list.concat(st[mark] || []);
 		});
-		// Process whole branch
-		if (grunt.option('all')) {
-			grunt.task.run(task);
-		}
-		else if(st && st_list.length > 0) {
+		if(st && st_list.length > 0) {
 			// Only process the new, changed or the added files(X, M, A)
 			// 复制一个新target，防止原配置被覆盖
 			grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
