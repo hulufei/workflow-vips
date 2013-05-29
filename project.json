@@ -2,7 +2,7 @@
 	"name": "name",
 	"description": "about project",
 	"branches": {
-		"base": "65",
+		"base": "branches",
 		"tpl": {
 		},
 		"static": {
