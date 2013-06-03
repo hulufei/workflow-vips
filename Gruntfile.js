@@ -100,10 +100,10 @@ module.exports = function(grunt) {
         files: '<%= jshint.tests.src %>',
         tasks: ['jshint:tests', 'test']
       },
-    vipserver: {
-    files: 'empty',
-    tasks: []
-    }
+      vipserver: {
+        files: 'empty',
+        tasks: []
+      }
     },
     copy: {
       vips: {
