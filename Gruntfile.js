@@ -99,7 +99,11 @@ module.exports = function(grunt) {
       tests: {
         files: '<%= jshint.tests.src %>',
         tasks: ['jshint:tests', 'test']
-      }
+      },
+	  vipserver: {
+		files: '<%= jshint.gruntfile.src %>',
+		tasks: []
+	  }
     },
     copy: {
       vips: {
@@ -953,8 +957,22 @@ module.exports = function(grunt) {
     });
   });
 
+  // Start static server to map to local
+  grunt.registerTask('vipserver', function() {
+    var branches = preprocess('project');
+	var branch = branches.dev.static[0];
+	// Map s2.vipshop.com to local
+	var fs = require('fs');
+	var hostfile = '/etc/hosts';
+	var hosts = fs.readFileSync(hostfile, 'utf8');
+	var mapline = '127.0.0.1 s2.vipshop.com\n';
+	fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
+	grunt.log.writeln('Modified ' + hostfile + ' map s2.vipshop.com to 127.0.0.1').green;
+    require('./lib/server')(branch);
+	grunt.task.run('watch:vipserver');
+  });
+
   // for debug
   grunt.registerTask('debug', function () {
-    console.log(grunt.config('picked'));
   });
 };
