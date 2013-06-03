@@ -101,7 +101,7 @@ module.exports = function(grunt) {
         tasks: ['jshint:tests', 'test']
       },
 	  vipserver: {
-		files: '<%= jshint.gruntfile.src %>',
+		files: 'empty',
 		tasks: []
 	  }
     },
@@ -969,6 +969,7 @@ module.exports = function(grunt) {
 	fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
 	grunt.log.writeln('Modified ' + hostfile + ' map s2.vipshop.com to 127.0.0.1').green;
     require('./lib/server')(branch);
+	// block the console
 	grunt.task.run('watch:vipserver');
   });
 
