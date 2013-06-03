@@ -100,10 +100,10 @@ module.exports = function(grunt) {
         files: '<%= jshint.tests.src %>',
         tasks: ['jshint:tests', 'test']
       },
-	  vipserver: {
-		files: 'empty',
-		tasks: []
-	  }
+    vipserver: {
+    files: 'empty',
+    tasks: []
+    }
     },
     copy: {
       vips: {
@@ -166,6 +166,13 @@ module.exports = function(grunt) {
       }
     },
     shell: {
+      checkout: {
+        command: 'svn checkout <%= remoteUrl %> <%= localPath %>',
+        options: {
+          stdout: true,
+          stderr: true
+        }
+      },
       commit: {
         command: 'svn commit -m "' + (grunt.option('m') || "<%= _msg %>") + '" <%= branch_dest %>',
         options: {
@@ -701,6 +708,24 @@ module.exports = function(grunt) {
     });
   });
 
+  // Checkout branches according to project
+  grunt.registerTask('co', function() {
+    var branches = preprocess('project');
+    branches.getAll().forEach(function(branch) {
+      branch = branch.split(/[/\\]/).slice(-1)[0];
+      grunt.task.run('checkout:' + branch);
+    });
+  });
+
+  // svn checkout
+  grunt.registerTask('checkout', function(branch) {
+    var base = grunt.config('project.branches.base');
+    var url = grunt.config('project.branches.remote') + branch;
+    grunt.config('remoteUrl', url);
+    grunt.config('localPath', path.join(base, branch));
+    grunt.task.run('shell:checkout');
+  });
+
   // svn update, commit之前发现冲突
   grunt.registerTask('update', function (branch) {
     grunt.config('branch_dest', branch);
@@ -960,17 +985,17 @@ module.exports = function(grunt) {
   // Start static server to map to local
   grunt.registerTask('vipserver', function() {
     var branches = preprocess('project');
-	var branch = branches.dev.static[0];
-	// Map s2.vipshop.com to local
-	var fs = require('fs');
-	var hostfile = '/etc/hosts';
-	var hosts = fs.readFileSync(hostfile, 'utf8');
-	var mapline = '127.0.0.1 s2.vipshop.com\n';
-	fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
-	grunt.log.writeln('Modified ' + hostfile + ' map s2.vipshop.com to 127.0.0.1').green;
-    require('./lib/server')(branch);
-	// block the console
-	grunt.task.run('watch:vipserver');
+    var branch = branches.dev.static[0];
+    // Map s2.vipshop.com to local
+    var fs = require('fs');
+    var hostfile = '/etc/hosts';
+    var hosts = fs.readFileSync(hostfile, 'utf8');
+    var mapline = '127.0.0.1 s2.vipshop.com\n';
+    fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
+    grunt.log.writeln('Modified ' + hostfile + ' map s2.vipshop.com to 127.0.0.1').green;
+      require('./lib/server')(branch);
+    // block the console
+    grunt.task.run('watch:vipserver');
   });
 
   // for debug

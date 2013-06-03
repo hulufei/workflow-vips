@@ -2,6 +2,7 @@
 	"name": "name",
 	"description": "about project",
 	"branches": {
+		"remote": "https://svn.server.url/branches/"
 		"base": "branches",
 		"tpl": {
 		},
