@@ -20,7 +20,7 @@ module.exports = function(grunt) {
         'static': []
       },
       test: {
-        'tpl': [],
+        // 'tpl': [],
         'static': []
       },
       getAll: function (name) { 
@@ -111,12 +111,6 @@ module.exports = function(grunt) {
         cwd: '<%= branch_src %>/img',
         src: ['**/*', '!**/*.{jpg,jpeg,png,db}'],
         dest: '<%= branch_dest %>/img/'
-      },
-      tpl: {
-        expand: true,
-        cwd: '<%= branch_src %>/views',
-        src: ['**/*'],
-        dest: '<%= branch_dest %>/views/'
       }
     },
     uglify: {
@@ -435,7 +429,6 @@ module.exports = function(grunt) {
     }
     for (branch_src in tpl_branches) {
       branches.dev.tpl.push(branch_src);
-      branches.test.tpl.push(tpl_branches[branch_src]);
     }
     // 设置到内部，共享使用
     grunt.config('_project', project);
@@ -568,11 +561,7 @@ module.exports = function(grunt) {
     }
 
     // 对应模板页面分支的处理
-    for (var tpl_src in tpl_branches) {
-      var tpl_dest = tpl_branches[tpl_src];
-      // 同步模板页
-      grunt.task.run('copytpl:' + tpl_src + ':' + tpl_dest);
-    }
+	// noop
   });
 
   // CSS变量替换
@@ -668,13 +657,6 @@ module.exports = function(grunt) {
     }
   });
 
-  // copy wrapper
-  grunt.registerTask('copytpl', function (branch_src, branch_dest) {
-    grunt.config('branch_src', branch_src);
-    grunt.config('branch_dest', branch_dest);
-    grunt.task.run('copy:tpl');
-  });
-
   // Commit all branches(dev/test)
   grunt.registerTask('commitall', function (name) {
     grunt.task.requires('build');
@@ -708,10 +690,10 @@ module.exports = function(grunt) {
     });
   });
 
-  // Checkout branches according to project
+  // Checkout branches(static) according to project
   grunt.registerTask('co', function() {
     var branches = preprocess('project');
-    branches.getAll().forEach(function(branch) {
+    branches.dev.static.concat(branches.test.static).forEach(function(branch) {
       branch = branch.split(/[/\\]/).slice(-1)[0];
       grunt.task.run('checkout:' + branch);
     });
