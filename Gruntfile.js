@@ -1002,11 +1002,11 @@ module.exports = function(grunt) {
   });
 
   /**
-   * Global settings
+   * Global running codes
    */
 
   // It should config out of the task, if need the template params keep all the time
-  // eg. run task in watch
+  // eg. run task with dynamic config params in watch task
   var branches = preprocess('project');
   grunt.config('branch_tpl', branches.dev.tpl[0]);
 
