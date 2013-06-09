@@ -101,8 +101,8 @@ module.exports = function(grunt) {
         tasks: ['jshint:tests', 'test']
       },
       vipserver: {
-        files: 'empty',
-        tasks: []
+        files: '<%= sftp.vips.files.src %>',
+        tasks: ['sftp:vips']
       }
     },
     copy: {
@@ -159,6 +159,22 @@ module.exports = function(grunt) {
         dest: '<%= branch_dest %>/img/'
       }
     },
+  sftp: {
+    options: {
+      username: '<%= project.username %>',
+      password: '<%= project.password %>'
+    },
+    vips: {
+      files: {
+        src: '<%= branch_tpl %>/views/**/*.html'
+      },
+      options: {
+        host: '<%= project.server %>',
+        path: '/apps/dat/web/working/xingte.vipshop.com/views/',
+        srcBasePath: '<%= branch_tpl %>/views/'
+      }
+    }
+  },
     shell: {
       checkout: {
         command: 'svn checkout <%= remoteUrl %> <%= localPath %>',
@@ -250,6 +266,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-closurecompiler');
   grunt.loadNpmTasks('grunt-shell');
+  grunt.loadNpmTasks('grunt-ssh');
   //grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-nodeunit');
   grunt.loadNpmTasks('grunt-contrib-jshint');
@@ -493,7 +510,7 @@ module.exports = function(grunt) {
   });
 
   // 建立watch任务，对应分支做jshint，csslint
-  // TODO: 甚至在项目开始前svn copy新建分支
+  // TODO: 甚至在项目开始前svn copy新建分支, sftp同步远程服务器
   grunt.registerTask('watch_setup', function () {
     var branches = preprocess('project');
     var vips = {
@@ -561,7 +578,7 @@ module.exports = function(grunt) {
     }
 
     // 对应模板页面分支的处理
-	// noop
+  // noop
   });
 
   // CSS变量替换
@@ -974,13 +991,26 @@ module.exports = function(grunt) {
     var hosts = fs.readFileSync(hostfile, 'utf8');
     var mapline = '127.0.0.1 s2.vipshop.com\n';
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
-    grunt.log.writeln('Modified ' + hostfile + ' map s2.vipshop.com to 127.0.0.1').green;
-      require('./lib/server')(branch);
-    // block the console
+    grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
+    require('./lib/server')(branch);
+    // block the console, sftp sync
     grunt.task.run('watch:vipserver');
   });
 
   // for debug
   grunt.registerTask('debug', function () {
   });
+
+  /**
+   * Global settings
+   */
+
+  // It should config out of the task, if need the template params keep all the time
+  // eg. run task in watch
+  var branches = preprocess('project');
+  grunt.config('branch_tpl', branches.dev.tpl[0]);
+
+  grunt.log.writeln('\n=================================='.green);
+  grunt.log.writeln('WORKING ON PROJECT ' + grunt.config('project.name').green + ' NOW!');
+  grunt.log.writeln('=================================='.green);
 };
