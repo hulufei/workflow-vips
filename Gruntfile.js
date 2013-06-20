@@ -1045,18 +1045,35 @@ module.exports = function(grunt) {
 
   // Start static server to map to local
   grunt.registerTask('vipserver', function() {
+    var isWin = !!process.platform.match(/^win/);
+    var hostfile = isWin ? 'c:/windows/system32/drivers/etc/hosts': '/etc/hosts';
+
     var branches = preprocess('project');
     var branch = grunt.config('target_branch_static');
     // Map s2.vipshop.com to local
     var fs = require('fs');
-    var hostfile = '/etc/hosts';
     var hosts = fs.readFileSync(hostfile, 'utf8');
-    var mapline = '127.0.0.1 s2.vipshop.com\n';
+    var mapline = '127.0.0.1 s2.vipshop.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
     grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
     require('./lib/server')(branch);
     // block the console, sftp sync
     grunt.task.run('sync_setup', 'watch:sync');
+  });
+
+  // switch hosts file
+  grunt.registerTask('switch', function(name) {
+    var isWin = !!process.platform.match(/^win/);
+    var dest = isWin ? 'c:/windows/system32/drivers/etc/hosts': '/etc/hosts';
+
+    var src = 'hosts/' + name + '.hosts';
+    if (grunt.file.exists(src)) {
+      grunt.file.copy(src, dest);
+      grunt.log.writeln('Copied ' + src.green + ' to ' + dest.green);
+    }
+    else {
+      grunt.fatal(src + ' does not exist!');
+    }
   });
 
   // for debug
