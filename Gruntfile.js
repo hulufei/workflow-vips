@@ -100,9 +100,9 @@ module.exports = function(grunt) {
         files: '<%= jshint.tests.src %>',
         tasks: ['jshint:tests', 'test']
       },
-      vipserver: {
-        files: '<%= sftp.vips.files.src %>',
-        tasks: ['sftp:vips']
+      sync: {
+        files: '<%= sftp.tpl.files.src %>',
+        tasks: ['sync:tpl']
       }
     },
     copy: {
@@ -159,22 +159,32 @@ module.exports = function(grunt) {
         dest: '<%= branch_dest %>/img/'
       }
     },
-  sftp: {
-    options: {
-      username: '<%= project.username %>',
-      password: '<%= project.password %>'
-    },
-    vips: {
-      files: {
-        src: '<%= branch_tpl %>/views/**/*.html'
+    sftp: {
+      tpl: {
+        files: {
+          src: '<%= target_branch_tpl %>/views/**/*.html'
+        },
+        options: {
+          host: '<%= project.server.tpl.host %>',
+          username: '<%= project.server.tpl.username %>',
+          password: '<%= project.server.tpl.password %>',
+          path: '/apps/dat/web/working/<%= project.server.tpl.dest %>/views/',
+          srcBasePath: '<%= target_branch_tpl %>/views/'
+        }
       },
-      options: {
-        host: '<%= project.server %>',
-        path: '/apps/dat/web/working/xingte.vipshop.com/views/',
-        srcBasePath: '<%= branch_tpl %>/views/'
+      s2: {
+        files: {
+          src: '<%= target_branch_static %>/**/*'
+        },
+        options: {
+          host: '<%= project.server.static.host %>',
+          username: '<%= project.server.static.username %>',
+          password: '<%= project.server.static.password %>',
+          path: '/apps/dat/web/working/<%= project.server.static.dest %>/',
+          srcBasePath: '<%= target_branch_static %>/'
+        }
       }
-    }
-  },
+    },
     shell: {
       checkout: {
         command: 'svn checkout <%= remoteUrl %> <%= localPath %>',
@@ -308,7 +318,7 @@ module.exports = function(grunt) {
               })
             );
             st_data[branch] = st_data[branch] || {};
-            st_data[branch]['M'] = files;
+            st_data[branch].M = files;
           }
         }
       }
@@ -345,7 +355,7 @@ module.exports = function(grunt) {
       }
       else {
         // 关于项目的说明，可以配置在<%= project.description %>
-        json['description'] = project.description || '';
+        json.description = project.description || '';
       }
       if (rev) {
         // revData read from hook
@@ -419,7 +429,7 @@ module.exports = function(grunt) {
 
     // join branches
     var joined_branches = {},
-        base = project.branches['base'];
+        base = project.branches.base;
     if (base) {
       ['static', 'tpl'].forEach(function (k) {
         var bs = project.branches[k];
@@ -439,7 +449,7 @@ module.exports = function(grunt) {
     // 保存所有相关的分支名
     var branch_src = '',
         static_branches = project.branches['static'] || {},
-        tpl_branches = project.branches['tpl'] || {};
+        tpl_branches = project.branches.tpl || {};
     for (branch_src in static_branches) {
       branches.dev.static.push(branch_src);
       branches.test.static.push(static_branches[branch_src]);
@@ -500,7 +510,7 @@ module.exports = function(grunt) {
     var build = grunt.file.readJSON('test/build.json');
     var changelog = project.name + '-CHANGELOG';
     grunt.config('project', project);
-    grunt.config('build', build);
+    grunt.config('buildConfig', build);
     grunt.file.copy('test/' + changelog, changelog);
     var branches = preprocess('project');
     grunt.config('clean.test', branches.getAll('test'));
@@ -545,8 +555,8 @@ module.exports = function(grunt) {
   grunt.registerTask('build', function (target) {
     preprocess('project');
     var project = grunt.config('_project');
-    var static_branches = project.branches['static'] || {},
-        tpl_branches = project.branches['tpl'] || {},
+    var static_branches = project.branches.static || {},
+        tpl_branches = project.branches.tpl || {},
         branch_src = '',
         branch_dest = '';
     var jscompiler = grunt.option('uglify') ? 'uglify' : 'closurecompiler';
@@ -981,10 +991,38 @@ module.exports = function(grunt) {
     });
   });
 
+  // set target branch
+  grunt.registerTask('sync_setup', function() {
+    var branches = preprocess('project');
+    grunt.config('target_branch_tpl', branches.dev.tpl[0]);
+    grunt.config('target_branch_static', branches.dev.static[0]);
+
+    if (!grunt.option('all')) {
+      // only sync changed files for s2
+      var branch = grunt.config('target_branch_static');
+      var filepaths = extractChangedPath(branch);
+      grunt.config('sftp.s2.files.src', filepaths);
+    }
+  });
+  grunt.registerTask('sync', function(target) {
+    // only sync changed files for s2
+    if (target === 's2') {
+      if (grunt.option('changelog')) {
+        preprocess('project');
+        ChangeLog.project = grunt.config('_project');
+        ChangeLog.extractStatus();
+      }
+      else {
+        grunt.task.run('statuslog:test');
+      }
+    }
+    grunt.task.run(['sync_setup', 'sftp:' + target]);
+  });
+
   // Start static server to map to local
   grunt.registerTask('vipserver', function() {
     var branches = preprocess('project');
-    var branch = branches.dev.static[0];
+    var branch = grunt.config('target_branch_static');
     // Map s2.vipshop.com to local
     var fs = require('fs');
     var hostfile = '/etc/hosts';
@@ -994,9 +1032,34 @@ module.exports = function(grunt) {
     grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
     require('./lib/server')(branch);
     // block the console, sftp sync
-    grunt.task.run('watch:vipserver');
+    grunt.task.run('sync_setup', 'watch:sync');
   });
 
+  /**
+   * Extract file paths from status data
+   * @param {String} branch target branch
+   * @return {Array} filepaths
+   */
+  function extractChangedPath(branch) {
+    var st_data = grunt.config('_output.st');
+    var st = st_data[branch];
+    var st_list = [], filepaths = [];
+    // FIXME: handle the file path with spaces
+    var filePattern = /.*\s+(.+)/;
+    if (st) {
+      ['X', 'M', 'A', 'R'].forEach(function(mark) {
+        st_list = st_list.concat(st[mark] || []);
+      });
+      var filepaths = st_list.map(function (st) {
+        var match = st.match(filePattern);
+        if (match) {
+          // 兼容windows文件路径，删除文件路径开头的斜杠
+          return match[1].replace(/\\/g, '/');
+        }
+      });
+    }
+    return filepaths;
+  }
   // for debug
   grunt.registerTask('debug', function () {
   });
@@ -1004,12 +1067,6 @@ module.exports = function(grunt) {
   /**
    * Global running codes
    */
-
-  // It should config out of the task, if need the template params keep all the time
-  // eg. run task with dynamic config params in watch task
-  var branches = preprocess('project');
-  grunt.config('branch_tpl', branches.dev.tpl[0]);
-
   grunt.log.writeln('\n=================================='.green);
   grunt.log.writeln('WORKING ON PROJECT ' + grunt.config('project.name').green + ' NOW!');
   grunt.log.writeln('=================================='.green);
