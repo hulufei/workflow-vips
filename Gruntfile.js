@@ -731,10 +731,11 @@ module.exports = function(grunt) {
     });
   });
 
-  // Checkout branches according to project
+  // Checkout branches(static) according to project
+  // tpl svn server differ from static, so you need to checkout manually
   grunt.registerTask('co', function() {
     var branches = preprocess('project');
-    branches.getAll('dev').concat(branches.test.static).forEach(function(branch) {
+    branches.dev.static.concat(branches.test.static).forEach(function(branch) {
       branch = branch.split(/[/\\]/).slice(-1)[0];
       grunt.task.run('checkout:' + branch);
     });
