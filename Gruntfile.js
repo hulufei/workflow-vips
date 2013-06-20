@@ -717,10 +717,10 @@ module.exports = function(grunt) {
     });
   });
 
-  // Checkout branches(static) according to project
+  // Checkout branches according to project
   grunt.registerTask('co', function() {
     var branches = preprocess('project');
-    branches.dev.static.concat(branches.test.static).forEach(function(branch) {
+    branches.getAll('dev').concat(branches.test.static).forEach(function(branch) {
       branch = branch.split(/[/\\]/).slice(-1)[0];
       grunt.task.run('checkout:' + branch);
     });
