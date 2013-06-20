@@ -285,6 +285,89 @@ module.exports = function(grunt) {
   // load all grunt tasks
   //require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
+  /* Normalize project config 
+   * Check project config
+   * Set internal configs
+   */
+  function preprocess(project) {
+    var branches = grunt.config('_branches');
+    if (!branches.isEmpty()) {
+      return branches;
+    }
+    project = project ? grunt.config(project) : grunt.config('project');
+    // 检查配置
+    ['name', 'branches'].map(function (name) {
+      if (!project.hasOwnProperty(name)) {
+        grunt.log.error(project);
+        grunt.fatal('缺失配置：' + name, 1);
+      }
+    });
+    if (project.name.trim() === '') {
+      grunt.fatal('请指定要构建的项目名', 1);
+    }
+
+    // join branches
+    var joined_branches = {},
+        base = project.branches.base;
+    if (base) {
+      ['static', 'tpl'].forEach(function (k) {
+        var bs = project.branches[k];
+        joined_branches[k] = joined_branches[k] || {};
+        for (var dev in bs) {
+          // remove last slash
+          dev = dev.replace(/[\/\\]$/, '');
+          // compatible with windows
+          var src = path.join(base, dev).replace(/\\/g, '/');
+          var des = path.join(base, bs[dev]).replace(/\\/g, '/');
+          joined_branches[k][src] = des;
+        }
+      });
+      project.branches = joined_branches;
+    }
+
+    // 保存所有相关的分支名
+    var branch_src = '',
+        static_branches = project.branches.static || {},
+        tpl_branches = project.branches.tpl || {};
+    for (branch_src in static_branches) {
+      branches.dev.static.push(branch_src);
+      branches.test.static.push(static_branches[branch_src]);
+    }
+    for (branch_src in tpl_branches) {
+      branches.dev.tpl.push(branch_src);
+    }
+    // 设置到内部，共享使用
+    grunt.config('_project', project);
+    grunt.config('_branches', branches);
+    return branches;
+  }
+
+  /**
+   * Extract file paths from status data
+   * @param {String} branch target branch
+   * @return {Array} filepaths
+   */
+  function extractChangedPath(branch) {
+    var st_data = grunt.config('_output.st');
+    var st = st_data[branch];
+    var st_list = [], filepaths = [];
+    // FIXME: handle the file path with spaces
+    var filePattern = /.*\s+(.+)/;
+    if (st) {
+      ['X', 'M', 'A', 'R'].forEach(function(mark) {
+        st_list = st_list.concat(st[mark] || []);
+      });
+      filepaths = st_list.map(function (st) {
+        var match = st.match(filePattern);
+        if (match) {
+          // 兼容windows文件路径，删除文件路径开头的斜杠
+          return match[1].replace(/\\/g, '/');
+        }
+      });
+    }
+    return filepaths;
+  }
+
   // Handle the CHANGELOG file
   var ChangeLog = {
     // must be normalized project config
@@ -405,63 +488,6 @@ module.exports = function(grunt) {
       //grunt.log.writeln('Changelog generated: ' + changelog);
     }
   };
-
-  /* Normalize project config 
-   * Check project config
-   * Set internal configs
-   */
-  function preprocess(project) {
-    var branches = grunt.config('_branches');
-    if (!branches.isEmpty()) {
-      return branches;
-    }
-    project = project ? grunt.config(project) : grunt.config('project');
-    // 检查配置
-    ['name', 'branches'].map(function (name) {
-      if (!project.hasOwnProperty(name)) {
-        grunt.log.error(project);
-        grunt.fatal('缺失配置：' + name, 1);
-      }
-    });
-    if (project.name.trim() === '') {
-      grunt.fatal('请指定要构建的项目名', 1);
-    }
-
-    // join branches
-    var joined_branches = {},
-        base = project.branches.base;
-    if (base) {
-      ['static', 'tpl'].forEach(function (k) {
-        var bs = project.branches[k];
-        joined_branches[k] = joined_branches[k] || {};
-        for (var dev in bs) {
-          // remove last slash
-          dev = dev.replace(/[\/\\]$/, '');
-          // compatible with windows
-          var src = path.join(base, dev).replace(/\\/g, '/');
-          var des = path.join(base, bs[dev]).replace(/\\/g, '/');
-          joined_branches[k][src] = des;
-        }
-      });
-      project.branches = joined_branches;
-    }
-
-    // 保存所有相关的分支名
-    var branch_src = '',
-        static_branches = project.branches.static || {},
-        tpl_branches = project.branches.tpl || {};
-    for (branch_src in static_branches) {
-      branches.dev.static.push(branch_src);
-      branches.test.static.push(static_branches[branch_src]);
-    }
-    for (branch_src in tpl_branches) {
-      branches.dev.tpl.push(branch_src);
-    }
-    // 设置到内部，共享使用
-    grunt.config('_project', project);
-    grunt.config('_branches', branches);
-    return branches;
-  }
 
   // 提交到测试分支
   grunt.registerTask('push', [
@@ -640,15 +666,9 @@ module.exports = function(grunt) {
       return;
     }
 
-    // var st_data = ChangeLog.getStData();
-    var st_data = grunt.config('_output.st');
-    var st = st_data[branch_src];
-    var st_list = [];
-    grunt.log.debug(st);
-    ['X', 'M', 'A', 'R'].forEach(function(mark) {
-      st_list = st_list.concat(st[mark] || []);
-    });
-    if(st && st_list.length > 0) {
+    var filepaths = extractChangedPath(branch_src);
+
+    if(filepaths.length > 0) {
       // Only process the new, changed or the added files(X, M, A)
       // 复制一个新target，防止原配置被覆盖
       grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
@@ -660,16 +680,10 @@ module.exports = function(grunt) {
       }
       cwd = cwd ? cwd.replace(/\\/g, '/') : '';
       grunt.log.debug('replace cwd:' + cwd);
-      // FIXME: handle the file path with spaces
-      var filePattern = /.*\s+(.+)/;
-      var filepaths = st_list.map(function (st) {
-        grunt.log.debug('st: ');
-        grunt.log.debug(st);
-        var match = st.match(filePattern);
-        if (match) {
-          // 兼容windows文件路径，删除文件路径开头的斜杠
-          return match[1].replace(/\\/g, '/').replace(cwd, '').replace(/^\//, '');
-        }
+
+      filepaths = filepaths.map(function (filepath) {
+          // 删除分支名以及文件路径开头的斜杠
+          return filepath.replace(cwd, '').replace(/^\//, '');
       });
       grunt.log.debug('filepaths:');
       grunt.log.debug(filepaths);
@@ -1045,31 +1059,6 @@ module.exports = function(grunt) {
     grunt.task.run('sync_setup', 'watch:sync');
   });
 
-  /**
-   * Extract file paths from status data
-   * @param {String} branch target branch
-   * @return {Array} filepaths
-   */
-  function extractChangedPath(branch) {
-    var st_data = grunt.config('_output.st');
-    var st = st_data[branch];
-    var st_list = [], filepaths = [];
-    // FIXME: handle the file path with spaces
-    var filePattern = /.*\s+(.+)/;
-    if (st) {
-      ['X', 'M', 'A', 'R'].forEach(function(mark) {
-        st_list = st_list.concat(st[mark] || []);
-      });
-      filepaths = st_list.map(function (st) {
-        var match = st.match(filePattern);
-        if (match) {
-          // 兼容windows文件路径，删除文件路径开头的斜杠
-          return match[1].replace(/\\/g, '/');
-        }
-      });
-    }
-    return filepaths;
-  }
   // for debug
   grunt.registerTask('debug', function () {
   });
