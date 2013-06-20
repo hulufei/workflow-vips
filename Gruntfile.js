@@ -1050,14 +1050,24 @@ module.exports = function(grunt) {
     var hostfile = isWin ? 'c:/windows/system32/drivers/etc/hosts': '/etc/hosts';
 
     var branches = preprocess('project');
-    var branch = grunt.config('target_branch_static');
+    var project = grunt.config('_project');
+    var statices = project.branches.static;
+    // target static branch is a test static branch, so we need to find the
+    // mapped dev static branch to server locally
+    var tb_static = grunt.config('target_branch_static');
+    var dev_static;
+    for (dev_static in statices) {
+      if (statices[dev_static] === tb_static) {
+        break;
+      }
+    }
     // Map s2.vipshop.com to local
     var fs = require('fs');
     var hosts = fs.readFileSync(hostfile, 'utf8');
     var mapline = '127.0.0.1 s2.vipshop.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
     grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
-    require('./lib/server')(branch);
+    require('./lib/server')(dev_static);
     // block the console, sftp sync
     grunt.task.run('sync_setup', 'watch:sync');
   });
@@ -1079,6 +1089,8 @@ module.exports = function(grunt) {
 
   // for debug
   grunt.registerTask('debug', function () {
+	  preprocess('project');
+	  console.log(grunt.config('_project'));
   });
 
   /**
