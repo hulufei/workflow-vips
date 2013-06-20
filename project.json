@@ -16,13 +16,15 @@
 			"server": "xx.xx.xx.xx",
 			"username": "server's login name",
 			"password": "server's login password",
-			"dest": "remote/dir"
+			"dest": "remote/dir",
+			"branch": ""
 		},
 		"static": {
 			"server": "xx.xx.xx.xx",
 			"username": "server's login name",
 			"password": "server's login password",
-			"dest": "remote/dir"
+			"dest": "remote/dir",
+			"branch": ""
 		}
 	}
 }

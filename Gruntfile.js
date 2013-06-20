@@ -448,7 +448,7 @@ module.exports = function(grunt) {
 
     // 保存所有相关的分支名
     var branch_src = '',
-        static_branches = project.branches['static'] || {},
+        static_branches = project.branches.static || {},
         tpl_branches = project.branches.tpl || {};
     for (branch_src in static_branches) {
       branches.dev.static.push(branch_src);
@@ -994,8 +994,11 @@ module.exports = function(grunt) {
   // set target branch
   grunt.registerTask('sync_setup', function() {
     var branches = preprocess('project');
-    grunt.config('target_branch_tpl', branches.dev.tpl[0]);
-    grunt.config('target_branch_static', branches.dev.static[0]);
+    // default set to first tpl branch and first static test branch
+    grunt.config('target_branch_tpl', 
+      grunt.config('project.server.tpl.branch') || branches.dev.tpl[0]);
+    grunt.config('target_branch_static', 
+      grunt.config('project.server.static.branch') || branches.test.static[0]);
 
     if (!grunt.option('all')) {
       // only sync changed files for s2
@@ -1004,9 +1007,16 @@ module.exports = function(grunt) {
       grunt.config('sftp.s2.files.src', filepaths);
     }
   });
+
+  /**
+   * sync:s2 support two options:
+   *     --changelog: sync changelog files
+   *     --all: sync whole static-test branch(see in sync_setup task)
+   *     default sync svn changed files
+   */
   grunt.registerTask('sync', function(target) {
-    // only sync changed files for s2
-    if (target === 's2') {
+    // only sync changed files for s2(default sync to s2)
+    if (!target || target === 's2') {
       if (grunt.option('changelog')) {
         preprocess('project');
         ChangeLog.project = grunt.config('_project');
@@ -1050,7 +1060,7 @@ module.exports = function(grunt) {
       ['X', 'M', 'A', 'R'].forEach(function(mark) {
         st_list = st_list.concat(st[mark] || []);
       });
-      var filepaths = st_list.map(function (st) {
+      filepaths = st_list.map(function (st) {
         var match = st.match(filePattern);
         if (match) {
           // 兼容windows文件路径，删除文件路径开头的斜杠
