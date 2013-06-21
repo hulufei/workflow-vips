@@ -374,7 +374,10 @@ module.exports = function(grunt) {
     project: '', 
     branch: '',
     disabled: false,
-    extractStatus: function () {
+	/**
+	 * @param {Boolean} all dedicate if extract status data contain test branch
+	 */
+    extractStatus: function (all) {
       var st_data = grunt.option('_output.st') || {};
       if (Object.keys(st_data).length > 0) {
         return st_data;
@@ -389,7 +392,7 @@ module.exports = function(grunt) {
         var dev_branches = grunt.config('_branches').getAll('dev');
         var files = [], v, branch;
         for (branch in changelog) {
-          if (dev_branches.indexOf(branch) === -1) {
+          if (!all && dev_branches.indexOf(branch) === -1) {
             // ignore test branch
             continue;
           }
@@ -1007,7 +1010,7 @@ module.exports = function(grunt) {
   });
 
   // set target branch
-  grunt.registerTask('sync_setup', function() {
+  grunt.registerTask('sync_setup', function(target) {
     var branches = preprocess('project');
     // default set to first tpl branch and first static test branch
     grunt.config('target_branch_tpl', 
@@ -1015,8 +1018,8 @@ module.exports = function(grunt) {
     grunt.config('target_branch_static', 
       grunt.config('project.server.static.branch') || branches.test.static[0]);
 
-    if (!grunt.option('all')) {
-      // only sync changed files for s2
+    if (target === 'st') {
+      // setup for svn changed files(status data)
       var branch = grunt.config('target_branch_static');
       var filepaths = extractChangedPath(branch);
       grunt.config('sftp.s2.files.src', filepaths);
@@ -1024,24 +1027,48 @@ module.exports = function(grunt) {
   });
 
   /**
-   * sync:s2 support two options:
-   *     --changelog: sync changelog files
-   *     --all: sync whole static-test branch(see in sync_setup task)
-   *     default sync svn changed files
+   * Note: tpl branch always sync whole 
+   *
+   * sync
+   *    push and sync modified files
+   * sync:tpl
+   *    sync whole tpl branch
+   * sync:s2
+   *    sync whole static branch
+   * sync:changelog
+   *    sync changelog files
    */
   grunt.registerTask('sync', function(target) {
     // only sync changed files for s2(default sync to s2)
-    if (!target || target === 's2') {
-      if (grunt.option('changelog')) {
-        preprocess('project');
-        ChangeLog.project = grunt.config('_project');
-        ChangeLog.extractStatus();
-      }
-      else {
-        grunt.task.run('statuslog:test');
-      }
+    if (target === 'tpl') {
+      // sync whole tpl branch
+      grunt.task.run(['sync_setup', 'sftp:tpl']);
     }
-    grunt.task.run(['sync_setup', 'sftp:' + target]);
+    else if (target === 's2') {
+      // sync whole s2 branch
+      grunt.task.run(['sync_setup', 'sftp:s2']);
+    }
+    else if (target === 'changelog') {
+      // sync changelog files
+      preprocess('project');
+      ChangeLog.project = grunt.config('_project');
+      ChangeLog.extractStatus(true);
+      grunt.task.run(['sync_setup:st', 'sftp']);
+    }
+    else {
+      // normal: push and sync, don't forget -m for commit message
+      grunt.task.run([
+        'upall:dev', 
+        'statuslog:dev', 
+        'build', 
+        'statuslog:test', 
+        'sync_setup:st',
+        'commitall:test', 
+        'commitall:dev', 
+        'sftp',
+        'finish'
+      ]);
+    }
   });
 
   // Start static server to map to local
@@ -1089,8 +1116,6 @@ module.exports = function(grunt) {
 
   // for debug
   grunt.registerTask('debug', function () {
-	  preprocess('project');
-	  console.log(grunt.config('_project'));
   });
 
   /**
