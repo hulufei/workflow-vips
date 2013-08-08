@@ -1,5 +1,6 @@
 /*global module:false*/
 var path = require('path');
+var fs = require('fs');
 module.exports = function(grunt) {
   // Project configuration.
   grunt.initConfig({
@@ -87,6 +88,9 @@ module.exports = function(grunt) {
         },
         src: ['test/*.js']
       }
+    },
+    yuidoc: {
+      vips: grunt.file.readJSON('yuidoc.json')
     },
     csslint: {
       vips: '<%= cssmin.vips %>'
@@ -282,6 +286,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-csslint');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-yuidoc');
   // load all grunt tasks
   //require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
@@ -374,9 +379,9 @@ module.exports = function(grunt) {
     project: '', 
     branch: '',
     disabled: false,
-	/**
-	 * @param {Boolean} all dedicate if extract status data contain test branch
-	 */
+    /**
+    * @param {Boolean} all dedicate if extract status data contain test branch
+    */
     extractStatus: function (all) {
       var st_data = grunt.option('_output.st') || {};
       if (Object.keys(st_data).length > 0) {
@@ -684,10 +689,21 @@ module.exports = function(grunt) {
       cwd = cwd ? cwd.replace(/\\/g, '/') : '';
       grunt.log.debug('replace cwd:' + cwd);
 
-      filepaths = filepaths.map(function (filepath) {
-          // 删除分支名以及文件路径开头的斜杠
-          return filepath.replace(cwd, '').replace(/^\//, '');
+      // TODO: maybe need to move to extractChangedPath?
+      var subfiles = [];
+      filepaths.forEach(function(filepath) {
+        // 提取目录下的所有文件
+        if (grunt.file.isDir(filepath)) {
+            subfiles = subfiles.concat(grunt.file.expand(path.join(filepath, '**/*')));
+        }
       });
+      filepaths = filepaths.concat(subfiles);
+
+      filepaths = filepaths.map(function (filepath) {
+        // 删除分支名以及文件路径开头的斜杠
+        return filepath.replace(cwd, '').replace(/^\//, '');
+      });
+
       grunt.log.debug('filepaths:');
       grunt.log.debug(filepaths);
       grunt.log.debug('patterns:');
@@ -1089,7 +1105,6 @@ module.exports = function(grunt) {
       }
     }
     // Map s2.vipshop.com to local
-    var fs = require('fs');
     var hosts = fs.readFileSync(hostfile, 'utf8');
     var mapline = '127.0.0.1 s2.vipshop.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
