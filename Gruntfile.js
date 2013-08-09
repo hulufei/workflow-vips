@@ -89,6 +89,9 @@ module.exports = function(grunt) {
         src: ['test/*.js']
       }
     },
+    phplint: {
+      vips: []
+    },
     yuidoc: {
       vips: grunt.file.readJSON('yuidoc.json')
     },
@@ -281,6 +284,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-closurecompiler');
   grunt.loadNpmTasks('grunt-shell');
   grunt.loadNpmTasks('grunt-ssh');
+  grunt.loadNpmTasks('grunt-phplint');
   //grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-nodeunit');
   grunt.loadNpmTasks('grunt-contrib-jshint');
@@ -569,13 +573,23 @@ module.exports = function(grunt) {
   });
 
   // lint added/modified js and css
-  grunt.registerTask('lint', function () {
+  grunt.registerTask('lint', function (target) {
     var branches = preprocess('project');
-    grunt.task.run('statuslog:dev');
-    branches.getAll('dev').forEach(function (branch) {
-      grunt.task.run(['apply', 'jshint', branch].join(':'));
-      grunt.task.run(['apply', 'csslint', branch].join(':'));
-    });
+    // Lint php template
+    if (target === 'php') {
+      var tpls = branches.dev.tpl.map(function(branch) {
+        return path.join(branch, '**/*.html');
+      });
+      grunt.config('phplint.vips', tpls);
+      grunt.task.run('phplint');
+    }
+    else {
+      grunt.task.run('statuslog:dev');
+      branches.getAll('dev').forEach(function (branch) {
+        grunt.task.run(['apply', 'jshint', branch].join(':'));
+        grunt.task.run(['apply', 'csslint', branch].join(':'));
+      });
+    }
   });
 
   /**
@@ -1131,6 +1145,8 @@ module.exports = function(grunt) {
 
   // for debug
   grunt.registerTask('debug', function () {
+    grunt.config('branch_src', 'branches/my-redmine-15140');
+    grunt.task.run('phplint');
   });
 
   /**
