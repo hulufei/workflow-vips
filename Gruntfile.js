@@ -1120,7 +1120,7 @@ module.exports = function(grunt) {
     }
     // Map s2.vipshop.com to local
     var hosts = fs.readFileSync(hostfile, 'utf8');
-    var mapline = '127.0.0.1 s2.vipshop.com' + grunt.util.linefeed;
+    var mapline = '127.0.0.1 s2.vipshop.com s2.vimage2.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
     grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
     require('./lib/server')(dev_static);
@@ -1135,6 +1135,10 @@ module.exports = function(grunt) {
 
     var src = 'hosts/' + name + '.hosts';
     if (grunt.file.exists(src)) {
+      var hosts = fs.readFileSync(src, 'utf8');
+      var mapline = '127.0.0.1 localhost' + grunt.util.linefeed;
+      fs.writeFileSync(src,  mapline + hosts.replace(mapline, ''));
+
       grunt.file.copy(src, dest);
       grunt.log.writeln('Copied ' + src.green + ' to ' + dest.green);
     }
