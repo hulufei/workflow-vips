@@ -1,0 +1,9 @@
+{
+    "name": "<%= project.name %>",
+    "description": "<%= project.description %>",
+    "options": {
+      "tabtospace": 4,
+      "paths": "branches/vipstatic-xinte-1.0/js",
+      "outdir": "yuidoc/"
+    }
+}

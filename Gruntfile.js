@@ -899,7 +899,7 @@ module.exports = function(grunt) {
     var changelog = project.name + '-CHANGELOG';
     if (grunt.file.exists(changelog)) {
       grunt.log.ok('CHANGELOG Generated, See: ' + changelog);
-      grunt.log.writeln(grunt.file.read(changelog));
+      grunt.log.debug(grunt.file.read(changelog));
     }
     else {
       grunt.log.warn(changelog + ' not found! You may run push first.');
