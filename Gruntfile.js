@@ -24,7 +24,7 @@ module.exports = function(grunt) {
         // 'tpl': [],
         'static': []
       },
-      getAll: function (name) { 
+      getAll: function (name) {
         var arr = [], branches, that = this;
         branches = name ? [name] : ['dev', 'test'];
         branches.forEach(function (branch) {
@@ -109,7 +109,12 @@ module.exports = function(grunt) {
       },
       sync: {
         files: '<%= sftp.tpl.files.src %>',
-        tasks: ['sync:tpl']
+        tasks: ['sftp:tpl'],
+        options: {
+          // If you need to dynamically modify your config, the spawn option must
+          // be disabled to keep the watch running under the same context.
+          spawn: false
+        }
       }
     },
     copy: {
@@ -294,7 +299,7 @@ module.exports = function(grunt) {
   // load all grunt tasks
   //require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
-  /* Normalize project config 
+  /* Normalize project config
    * Check project config
    * Set internal configs
    */
@@ -380,7 +385,7 @@ module.exports = function(grunt) {
   // Handle the CHANGELOG file
   var ChangeLog = {
     // must be normalized project config
-    project: '', 
+    project: '',
     branch: '',
     disabled: false,
     /**
@@ -503,17 +508,17 @@ module.exports = function(grunt) {
 
   // 提交到测试分支
   grunt.registerTask('push', [
-    'upall:dev', 
-    'statuslog:dev', 
-    'build', 
-    'statuslog:test', 
-    'commitall:test', 
-    'commitall:dev', 
+    'upall:dev',
+    'statuslog:dev',
+    'build',
+    'statuslog:test',
+    'commitall:test',
+    'commitall:dev',
     'finish'
   ]);
   // 发布, NOTE: BASED ON CHANGELOG
   grunt.registerTask('deploy', [
-    'upall:dev', 
+    'upall:dev',
     'update:build.json',
     'rever',
     'build:changelog',
@@ -522,20 +527,20 @@ module.exports = function(grunt) {
   ]);
   // 不依赖网络，可供预览更改
   grunt.registerTask('taste', [
-    'statuslog:dev', 
-    'build', 
-    'statuslog:test', 
+    'statuslog:dev',
+    'build',
+    'statuslog:test',
     'finish'
   ]);
   // 监听文件更改，做csslint和jshint
   grunt.registerTask('monitor', ['watch_setup', 'watch:vips']);
   // unit test
   grunt.registerTask('test', [
-    'test_setup', 
+    'test_setup',
     'clean:test',
-    'statuslog:dev', 
-    'build', 
-    'nodeunit:build', 
+    'statuslog:dev',
+    'build',
+    'nodeunit:build',
     'clean:test',
     'deploy',
     'nodeunit:deploy',
@@ -632,7 +637,7 @@ module.exports = function(grunt) {
       build_tasks.forEach(function (task) {
         // 生成对应的配置段
         grunt.task.run(['apply', task, branch_src, branch_dest].join(':'));
-      }); 
+      });
     }
 
     // 对应模板页面分支的处理
@@ -964,8 +969,8 @@ module.exports = function(grunt) {
       var bs = project.branches[name] || {};
       var branch_src, branch_test;
       for (branch_src in bs) {
-        // TortoiseSVN is annoyed when commit only one file, 
-        // the committed branch passed to hook will be the committed file's 
+        // TortoiseSVN is annoyed when commit only one file,
+        // the committed branch passed to hook will be the committed file's
         // parent directory, like `branches/demo/js` but not `branches/demo`, so
         // slice the string to compare. But `branches/demo-test/js` will match
         // `branches/demo`, so add a slash in the end.
@@ -1043,22 +1048,29 @@ module.exports = function(grunt) {
   grunt.registerTask('sync_setup', function(target) {
     var branches = preprocess('project');
     // default set to first tpl branch and first static test branch
-    grunt.config('target_branch_tpl', 
+    grunt.config('target_branch_tpl',
       grunt.config('project.server.tpl.branch') || branches.dev.tpl[0]);
-    grunt.config('target_branch_static', 
+    grunt.config('target_branch_static',
       grunt.config('project.server.static.branch') || branches.test.static[0]);
 
     if (target === 'st') {
       // setup for svn changed files(status data)
-      var branch = grunt.config('target_branch_static');
-      var filepaths = extractChangedPath(branch);
-      grunt.config('sftp.s2.files.src', filepaths);
+      var staticBranch = grunt.config('target_branch_static');
+      var staticFilepaths = extractChangedPath(staticBranch);
+      grunt.config('sftp.s2.files.src', staticFilepaths);
+
+      var tplBranch = grunt.config('target_branch_tpl');
+      var tplFilepaths = extractChangedPath(tplBranch);
+      grunt.config('sftp.tpl.files.src', tplFilepaths);
     }
   });
 
+  // Only sync modifed tpl
+  grunt.event.on('watch', function(action, filepaths) {
+    grunt.config('sftp.tpl.files.src', filepaths);
+  });
+
   /**
-   * Note: tpl branch always sync whole 
-   *
    * sync
    *    push and sync modified files
    * sync:tpl
@@ -1088,13 +1100,13 @@ module.exports = function(grunt) {
     else {
       // normal: push and sync, don't forget -m for commit message
       grunt.task.run([
-        'upall:dev', 
-        'statuslog:dev', 
-        'build', 
-        'statuslog:test', 
+        'upall:dev',
+        'statuslog:dev',
+        'build',
+        'statuslog:test',
         'sync_setup:st',
-        'commitall:test', 
-        'commitall:dev', 
+        'commitall:test',
+        'commitall:dev',
         'sftp',
         'finish'
       ]);
@@ -1148,9 +1160,9 @@ module.exports = function(grunt) {
   });
 
   // for debug
-  grunt.registerTask('debug', function () {
-    grunt.config('branch_src', 'branches/my-redmine-15140');
-    grunt.task.run('phplint');
+  grunt.registerTask('debug', function (a, b) {
+    grunt.log.writeln(a);
+    grunt.log.writeln(b);
   });
 
   /**
