@@ -108,12 +108,12 @@ module.exports = function(grunt) {
         tasks: ['jshint:tests', 'test']
       },
       sync: {
-        files: '<%= sftp.tpl.files.src %>',
+        files: '<%= target_branch_tpl %>/views/**/*.html',
         tasks: ['sftp:tpl'],
         options: {
           // If you need to dynamically modify your config, the spawn option must
           // be disabled to keep the watch running under the same context.
-          spawn: false
+          spawn: false,
         }
       }
     },
