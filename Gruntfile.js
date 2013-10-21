@@ -198,6 +198,13 @@ module.exports = function(grunt) {
       }
     },
     shell: {
+      copy: {
+        command: 'svn copy <%= sourceBranch %> <%= targetBranch %> -m "' + grunt.option('m') + '"',
+        options: {
+          stdout: true,
+          stderr: true
+        }
+      },
       checkout: {
         command: 'svn checkout <%= remoteUrl %> <%= localPath %>',
         options: {
@@ -786,6 +793,32 @@ module.exports = function(grunt) {
     grunt.config('remoteUrl', url);
     grunt.config('localPath', path.join(base, branch));
     grunt.task.run('shell:checkout');
+  });
+
+  // Initialize project (create static branches and checkout)
+  grunt.registerTask('init', function() {
+    var branches = preprocess('project');
+    // Create static branches
+    branches.dev.static.forEach(function(branch) {
+      grunt.task.run('svncopy:central:' + branch);
+    });
+    branches.test.static.forEach(function(branch) {
+      grunt.task.run('svncopy:trunk:' + branch);
+    });
+    grunt.task.run('co');
+  });
+  grunt.registerTask('svncopy', function(type, branch){
+    branch = branch.split(/[/\\]/).slice(-1)[0];
+    var url = 'https://10.100.90.28/svn/vipstatic/branches/';
+    if (type === 'central') {
+      grunt.config('sourceBranch', url + '/CentralSVN/');
+      grunt.config('targetBranch', url + '/' + branch);
+    }
+    else if (type === 'trunk') {
+      grunt.config('sourceBranch', 'https://10.100.90.28/svn/vipstatic/trunk/');
+      grunt.config('targetBranch', url + '/' + branch);
+    }
+    grunt.task.run('shell:copy');
   });
 
   // svn update, commit之前发现冲突
