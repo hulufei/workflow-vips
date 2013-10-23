@@ -199,7 +199,7 @@ module.exports = function(grunt) {
     },
     shell: {
       copy: {
-        command: 'svn copy <%= sourceBranch %> <%= targetBranch %> -m "' + grunt.option('m') + '"',
+        command: 'svn copy <%= sourceBranch %> <%= targetBranch %> -m "' + (grunt.option('m') || '<%= project.description %>') + '"',
         options: {
           stdout: true,
           stderr: true
@@ -782,16 +782,39 @@ module.exports = function(grunt) {
     var branches = preprocess('project');
     branches.dev.static.concat(branches.test.static).forEach(function(branch) {
       branch = branch.split(/[/\\]/).slice(-1)[0];
-      grunt.task.run('checkout:' + branch);
+      grunt.task.run('checkout:static:' + branch);
+    });
+    branches.dev.tpl.forEach(function(branch) {
+      branch = branch.split(/[/\\]/).slice(-1)[0];
+      grunt.task.run('checkout:tpl:' + branch);
     });
   });
 
+  function guessTplBranch(url, branchName) {
+    var tplChannels = {
+      my: 'vipmy'
+    };
+    // Branch name should be like `my-xxx` map to tplChannels
+    var channel = branchName.split('-')[0];
+    if (tplChannels[channel]) {
+      return url.replace(/\{\{.*\}\}/, tplChannels[channel]);
+    }
+    else {
+      grunt.fatal('Can not find channel: ' + channel);
+    }
+  }
   // svn checkout
-  grunt.registerTask('checkout', function(branch) {
+  grunt.registerTask('checkout', function(type, branch) {
     var base = grunt.config('project.branches.base');
-    var url = grunt.config('project.branches.remote') + branch;
-    grunt.config('remoteUrl', url);
+    if (type === 'static') {
+      grunt.config('remoteUrl', grunt.config('project.svn.static.branch') + branch);
+    }
+    else if (type === 'tpl') {
+      var url = guessTplBranch(grunt.config('project.svn.tpl.branch'), branch);
+      grunt.config('remoteUrl',  url + branch);
+    }
     grunt.config('localPath', path.join(base, branch));
+    grunt.log.debug(grunt.config('shell.checkout.command'));
     grunt.task.run('shell:checkout');
   });
 
@@ -805,19 +828,31 @@ module.exports = function(grunt) {
     branches.test.static.forEach(function(branch) {
       grunt.task.run('svncopy:trunk:' + branch);
     });
+    // Create tpl branches
+    branches.dev.tpl.forEach(function(branch) {
+      grunt.task.run('svncopy:tpl:' + branch);
+    });
     grunt.task.run('co');
   });
+
   grunt.registerTask('svncopy', function(type, branch){
     branch = branch.split(/[/\\]/).slice(-1)[0];
-    var url = 'https://10.100.90.28/svn/vipstatic/branches/';
+    var staticBranch = grunt.config('project.svn.static.branch');
+    var tplTrunk = grunt.config('project.svn.tpl.trunk');
+    var tplBranch = grunt.config('project.svn.tpl.branch');
     if (type === 'central') {
-      grunt.config('sourceBranch', url + '/CentralSVN/');
-      grunt.config('targetBranch', url + '/' + branch);
+      grunt.config('sourceBranch', staticBranch + 'CentralSVN/');
+      grunt.config('targetBranch', staticBranch +  branch);
     }
     else if (type === 'trunk') {
-      grunt.config('sourceBranch', 'https://10.100.90.28/svn/vipstatic/trunk/');
-      grunt.config('targetBranch', url + '/' + branch);
+      grunt.config('sourceBranch', grunt.config('project.svn.static.trunk'));
+      grunt.config('targetBranch', staticBranch + branch);
     }
+    else if (type === 'tpl') {
+      grunt.config('sourceBranch', guessTplBranch(tplTrunk, branch));
+      grunt.config('targetBranch', guessTplBranch(tplBranch, branch) + branch);
+    }
+    grunt.log.debug(grunt.config('shell.copy.command'));
     grunt.task.run('shell:copy');
   });
 

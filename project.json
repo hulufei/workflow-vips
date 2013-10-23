@@ -26,5 +26,15 @@
 			"dest": "remote/dir",
 			"branch": ""
 		}
+	},
+	"svn": {
+		"static": {
+			"branch": "https://xx.xx.xx.xx/branches/",
+			"trunk": "https://xx.xx.xx.xx/trunk/"
+		},
+		"tpl": {
+			"branch": "https://xx.x.x.x/{{ channel }}/branches/",
+			"trunk": "https://xx.x.x.x/{{ channel }}/trunk/"
+		}
 	}
 }
