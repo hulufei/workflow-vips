@@ -47,8 +47,8 @@ project.json
 	// svn配置段, 用于grunt init创建以及checkout配置的分支
 	"svn": {
 		"static": {
-			"branch": "https://10.100.90.28/svn/vipstatic/branches/",
-			"trunk": "https://10.100.90.28/svn/vipstatic/trunk/"
+			"branch": "https://xx.xx.xx.xx/svn/vipstatic/branches/",
+			"trunk": "https://xx.xx.xx.xx/svn/vipstatic/trunk/"
 		},
 		"tpl": {
 			"branch": "https://10.100.90.28/svn/{{ channel }}/branches/",

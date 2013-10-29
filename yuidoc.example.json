@@ -1,0 +1,9 @@
+{
+    "name": "<%= project.name %>",
+    "description": "<%= project.description %>",
+    "options": {
+      "tabtospace": 4,
+      "paths": "branch/path",
+      "outdir": "yuidoc/"
+    }
+}

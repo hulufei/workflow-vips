@@ -648,7 +648,7 @@ module.exports = function(grunt) {
     }
 
     // 对应模板页面分支的处理
-  // noop
+    // noop
   });
 
   // CSS变量替换
