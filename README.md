@@ -51,8 +51,8 @@ project.json
 			"trunk": "https://xx.xx.xx.xx/svn/vipstatic/trunk/"
 		},
 		"tpl": {
-			"branch": "https://10.100.90.28/svn/{{ channel }}/branches/",
-			"trunk": "https://10.100.90.28/svn/{{ channel }}/trunk/"
+			"branch": "https://xx.xx.xx.xx/{{ channel }}/branches/",
+			"trunk": "https://xx.xx.xx.xx/{{ channel }}/trunk/"
 		}
 	}
 }
