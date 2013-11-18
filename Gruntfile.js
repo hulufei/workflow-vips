@@ -517,7 +517,7 @@ module.exports = function(grunt) {
     'upall:dev',
     'statuslog:dev',
     'build',
-	'processCss',
+  'processCss',
     'statuslog:test',
     'commitall:test',
     'commitall:dev',
@@ -529,7 +529,7 @@ module.exports = function(grunt) {
     'update:build.json',
     'rever',
     'build:changelog',
-	'processCss',
+  'processCss',
     'pick',
     'finish'
   ]);
@@ -537,7 +537,7 @@ module.exports = function(grunt) {
   grunt.registerTask('taste', [
     'statuslog:dev',
     'build',
-	'processCss',
+  'processCss',
     'statuslog:test',
     'finish'
   ]);
@@ -549,7 +549,7 @@ module.exports = function(grunt) {
     'clean:test',
     'statuslog:dev',
     'build',
-	'processCss',
+  'processCss',
     'nodeunit:build',
     'clean:test',
     // 'deploy',
@@ -659,39 +659,39 @@ module.exports = function(grunt) {
       imgDomain: ''
     });
     var imgDomain = options.imgDomain,
-		imgPattern = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
-		imgPatternG = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
+    imgPattern = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
+    imgPatternG = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
 
     imgPattern.compile(imgPattern);
-	imgPatternG.compile(imgPatternG);
+  imgPatternG.compile(imgPatternG);
 
     function process(filepath) {
       if (grunt.file.exists(filepath) && grunt.file.isFile(filepath)) {
         var css = grunt.file.read(filepath);
-		var dir = filepath.replace(/\\/g, '/').match(/(.*?)\/css\/.*/)[1];
-		var imgs = css.match(imgPatternG);
-		var imgPaths = {};
-		if (imgs && imgs.length > 0) {
-			grunt.log.ok('Processing: ' + filepath);
-			imgs.forEach(function(img) {
-				// 图片文件路径
-				var imgPath = path.join(dir, 'img', img.match(imgPattern)[1]);
-				// 去重
-				imgPaths[imgPath] = '';
-			});
+    var dir = filepath.replace(/\\/g, '/').match(/(.*?)\/css\/.*/)[1];
+    var imgs = css.match(imgPatternG);
+    var imgPaths = {};
+    if (imgs && imgs.length > 0) {
+      grunt.log.ok('Processing: ' + filepath);
+      imgs.forEach(function(img) {
+        // 图片文件路径
+        var imgPath = path.join(dir, 'img', img.match(imgPattern)[1]);
+        // 去重
+        imgPaths[imgPath] = '';
+      });
 
-			// hash the img
-			for (var img in imgPaths) {
-				grunt.log.debug('Hashing: ' + img);
-				var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
-				img = '(' + img.replace(path.join(dir, 'img'), options.imgDomain) +
-					'?' + hash + ')';
-				css = css.replace(imgPatternG, img);
-			}
+      // hash the img
+      for (var img in imgPaths) {
+        grunt.log.debug('Hashing: ' + img);
+        var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
+        img = '(' + img.replace(path.join(dir, 'img'), options.imgDomain) +
+          '?' + hash + ')';
+        css = css.replace(imgPatternG, img);
+      }
 
-			grunt.file.write(filepath, css);
-			grunt.log.ok('Replace ' + filepath + ' Done!');
-		}
+      grunt.file.write(filepath, css);
+      grunt.log.ok('Replace ' + filepath + ' Done!');
+    }
       }
       else if (grunt.file.isDir(filepath)) {
         grunt.log.warn('Process a directory: ' + filepath);
