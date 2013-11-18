@@ -517,7 +517,6 @@ module.exports = function(grunt) {
     'upall:dev',
     'statuslog:dev',
     'build',
-  'processCss',
     'statuslog:test',
     'commitall:test',
     'commitall:dev',
@@ -529,7 +528,6 @@ module.exports = function(grunt) {
     'update:build.json',
     'rever',
     'build:changelog',
-  'processCss',
     'pick',
     'finish'
   ]);
@@ -537,7 +535,6 @@ module.exports = function(grunt) {
   grunt.registerTask('taste', [
     'statuslog:dev',
     'build',
-  'processCss',
     'statuslog:test',
     'finish'
   ]);
@@ -549,7 +546,6 @@ module.exports = function(grunt) {
     'clean:test',
     'statuslog:dev',
     'build',
-  'processCss',
     'nodeunit:build',
     'clean:test',
     // 'deploy',
@@ -648,6 +644,7 @@ module.exports = function(grunt) {
         grunt.task.run(['apply', task, branch_src, branch_dest].join(':'));
       });
     }
+    grunt.task.run('processCss');
 
     // 对应模板页面分支的处理
     // noop
