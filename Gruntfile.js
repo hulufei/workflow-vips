@@ -1,6 +1,8 @@
 /*global module:false*/
 var path = require('path');
 var fs = require('fs');
+var getHash = require('./lib/hash');
+
 module.exports = function(grunt) {
   // Project configuration.
   grunt.initConfig({
@@ -49,9 +51,6 @@ module.exports = function(grunt) {
     },
 
     // Task configuration.
-    branch_src: 'branch-dev',
-    branch_dest: 'branch-dev-test',
-
     jshint: {
       options: {
         curly: true,
@@ -518,6 +517,7 @@ module.exports = function(grunt) {
     'upall:dev',
     'statuslog:dev',
     'build',
+	'processCss',
     'statuslog:test',
     'commitall:test',
     'commitall:dev',
@@ -529,6 +529,7 @@ module.exports = function(grunt) {
     'update:build.json',
     'rever',
     'build:changelog',
+	'processCss',
     'pick',
     'finish'
   ]);
@@ -536,6 +537,7 @@ module.exports = function(grunt) {
   grunt.registerTask('taste', [
     'statuslog:dev',
     'build',
+	'processCss',
     'statuslog:test',
     'finish'
   ]);
@@ -547,10 +549,11 @@ module.exports = function(grunt) {
     'clean:test',
     'statuslog:dev',
     'build',
+	'processCss',
     'nodeunit:build',
     'clean:test',
-    'deploy',
-    'nodeunit:deploy',
+    // 'deploy',
+    // 'nodeunit:deploy',
     'clean'
   ]);
 
@@ -570,7 +573,6 @@ module.exports = function(grunt) {
   });
 
   // 建立watch任务，对应分支做jshint，csslint
-  // TODO: 甚至在项目开始前svn copy新建分支, sftp同步远程服务器
   grunt.registerTask('watch_setup', function () {
     var branches = preprocess('project');
     var vips = {
@@ -620,7 +622,7 @@ module.exports = function(grunt) {
         branch_src = '',
         branch_dest = '';
     var jscompiler = grunt.option('uglify') ? 'uglify' : 'closurecompiler';
-    var build_tasks = [jscompiler, 'cssmin', 'processCss', 'imagemin', 'copy'];
+    var build_tasks = [jscompiler, 'imagemin', 'cssmin', 'copy'];
 
     if (target === 'changelog') {
       ChangeLog.project = project;
@@ -651,31 +653,45 @@ module.exports = function(grunt) {
     // noop
   });
 
-  // CSS变量替换
+  // CSS引用图片版本号更新（根据图片内容hash取8位）
   grunt.registerMultiTask('processCss', 'replace variables in CSS', function () {
     var options =  this.options({
-      imgDomain: '',
-      versions: grunt.config('buildConfig')
+      imgDomain: ''
     });
     var imgDomain = options.imgDomain,
-        versions = options.versions;
-    var variablePattern = /\{\$.*?\}/;
-    variablePattern.compile(variablePattern);
+		imgPattern = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
+		imgPatternG = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
+
+    imgPattern.compile(imgPattern);
+	imgPatternG.compile(imgPatternG);
+
     function process(filepath) {
       if (grunt.file.exists(filepath) && grunt.file.isFile(filepath)) {
-        var css = grunt.file.read(filepath).replace(/\{\$imgDomain\}|\{\$staticImg\}/gm, imgDomain);
-        for (var param in versions) {
-          var pattern = new RegExp('\\{\\$' + param + '\\}', 'gm');
-          css = css.replace(pattern, versions[param]);
-        }
+        var css = grunt.file.read(filepath);
+		var dir = filepath.replace(/\\/g, '/').match(/(.*?)\/css\/.*/)[1];
+		var imgs = css.match(imgPatternG);
+		var imgPaths = {};
+		if (imgs && imgs.length > 0) {
+			grunt.log.ok('Processing: ' + filepath);
+			imgs.forEach(function(img) {
+				// 图片文件路径
+				var imgPath = path.join(dir, 'img', img.match(imgPattern)[1]);
+				// 去重
+				imgPaths[imgPath] = '';
+			});
 
-        // check if all variables are replaced
-        if (variablePattern.test(css)) {
-          grunt.fatal('File ' + filepath +
-            '\nVariables does not be replaced all:' + css.match(variablePattern), 1);
-        }
-        grunt.file.write(filepath, css);
-        grunt.log.ok('Replace ' + filepath + ' Done!');
+			// hash the img
+			for (var img in imgPaths) {
+				grunt.log.debug('Hashing: ' + img);
+				var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
+				img = '(' + img.replace(path.join(dir, 'img'), options.imgDomain) +
+					'?' + hash + ')';
+				css = css.replace(imgPatternG, img);
+			}
+
+			grunt.file.write(filepath, css);
+			grunt.log.ok('Replace ' + filepath + ' Done!');
+		}
       }
       else if (grunt.file.isDir(filepath)) {
         grunt.log.warn('Process a directory: ' + filepath);
@@ -708,10 +724,6 @@ module.exports = function(grunt) {
       grunt.config(task + '.vips_clone', grunt.config(task + '.vips'));
       var patterns = grunt.config(task).vips.src;
       var cwd = grunt.config(task).vips.cwd;
-      // FIXME: it's dirty, but works
-      if (task === 'processCss') {
-        cwd = grunt.config('cssmin.vips.cwd');
-      }
       cwd = cwd ? cwd.replace(/\\/g, '/') : '';
       grunt.log.debug('replace cwd:' + cwd);
 

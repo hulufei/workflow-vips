@@ -14,11 +14,11 @@
   background-image:url({$imgDomain}/te/comm_imgs.png?{$tourImgVer});
 }
 .goodsImgVer {
-  background-image:url({$imgDomain}/te/comm_imgs.png?{$goodsImgVer});
+  background-image:url({$imgDomain}/te/comm_imgs.png);
 }
 .mallImgVer {
-  background-image:url({$imgDomain}/te/comm_imgs.png?{$mallImgVer});
+  background-image:url('{$imgDomain}/te/comm_imgs.png?{$mallImgVer}');
 }
 .cardImgVer {
-  background-image:url({$imgDomain}/te/comm_imgs.png?{$cardImgVer});
+  background-image:url("{$imgDomain}/te/comm_imgs.png?{$cardImgVer}");
 }

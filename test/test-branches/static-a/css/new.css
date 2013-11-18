@@ -30,9 +30,7 @@ a:hover{color:#ec3891;}
 .login_after a:hover,.site_nav a:hover{text-decoration:underline;}
 /* comm_imgs background */
 .btn_login,.btn_reg,.site_order,.site_weibo,.site_attention,.site_weibo_icon,.vip_logo_img,.shopping_bag .btn_pay,.nav_line,.nav_current,.nav_list li a:hover,.nav_list_cell,.nav_call,.nav_online,.nav_supervisor,.shopping_info .btn_paynow,.new_post_icon,.head_new_icon,.category_tag,.cate_major strong,.to_top
-,.f_tit,.f_help_list dd a,.weixin,.login_after .uv_1,.login_after .uv_2,.survey_icon,.sidebar_bag,.sidebar_help,.sidebar_totop,.sidebar_advice,.sidebar li.selected,.sidebar_bag_icon{background-image:url({$imgDomain}/te/comm_imgs.png?{$shopImgVer}); background-repeat:no-repeat;}
 /*特卖会平铺图片*/
-.nav_bar,.cate_major,.pro_block,.pro_dotted{background:url({$imgDomain}/te/te_rep_imgs.png?{$shopImgVer});background-repeat:repeat-x;}
 
 #top_head{height:27px; background:#FBF9FB; border-bottom:1px solid #F8F2F7;}
 .login_info{width:250px; height:27px; padding-left:80px; float:left; line-height:27px; overflow:hidden;}
@@ -181,7 +179,6 @@ a:hover{color:#ec3891;}
 .btn100{background-position:0 -200px;width:100px;}
 .btn100:hover{ background-position:0 -250px; color:#fefffd;}
 /* 弹出框按钮-公用 */
-.btn130,.btn100,.btn130_gray,.icon_c,.pop_close_btn,.pop_add_success,.pop_tips_tit,.pro_soldout_title,.big_tit,.close_btn,.pop_viptip button{background-image:url({$imgDomain}/te/pop_btns.png?{$shopImgVer});background-repeat:no-repeat;}/* 弹出框按钮拼图 */
 .pop_up_border{background:#fbf9fc; border:1px solid #fff; border:1px solid #e7e4e7\9; box-shadow:0 0 6px #999;}
 .pop_close_bar{height:10px; overflow:hidden; margin:9px 19px 30px 0;}
 .pop_close_btn{width:10px; height:10px; float:right; background-position:-150px 0; cursor:pointer;}/* 关闭按扭 */
