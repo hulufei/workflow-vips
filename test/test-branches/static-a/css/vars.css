@@ -20,5 +20,6 @@
   background-image:url('{$imgDomain}/te/comm_imgs.png?{$mallImgVer}');
 }
 .cardImgVer {
+	background-color: rgba(0, 0, 0, .5);
   background-image:url("{$imgDomain}/te/comm_imgs.png?{$cardImgVer}");
 }
