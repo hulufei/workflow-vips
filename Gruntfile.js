@@ -657,8 +657,8 @@ module.exports = function(grunt) {
       imgDomain: ''
     });
     var imgDomain = options.imgDomain,
-    imgPattern = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
-    imgPatternG = /\(.*?\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
+    imgPattern = /\(['"]*\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
+    imgPatternG = /\(['"]*\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
 
     imgPattern.compile(imgPattern);
     imgPatternG.compile(imgPatternG);
