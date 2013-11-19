@@ -683,7 +683,7 @@ module.exports = function(grunt) {
         var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
         img = '(' + img.replace(path.join(dir, 'img'), options.imgDomain) +
           '?' + hash + ')';
-        css = css.replace(imgPatternG, img);
+        css = css.replace(imgPatternG, img.replace(/\\/g, '/'));
       }
 
       grunt.file.write(filepath, css);
