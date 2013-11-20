@@ -694,9 +694,9 @@ module.exports = function(grunt) {
               grunt.log.ok('Hashing: ' + img + ' -> ' + hash.green);
 
               var imgMatch = imgPaths[img];
-              var imgCss = path.join('{$imgDomain}', imgMatch);
+              var imgCss = path.join('{$imgDomain}', imgMatch).replace(/\\/g, '/');
 
-              img = options.imgDomain + '/' + imgMatch.replace(/\\/g, '/') + '?' + hash;
+              img = options.imgDomain + '/' + imgMatch + '?' + hash;
               css = replaceAll(imgCss, img, css).replace(/\?\{.*?\}/g, '');
             }
             else {
