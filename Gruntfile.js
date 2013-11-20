@@ -3,6 +3,11 @@ var path = require('path');
 var fs = require('fs');
 var getHash = require('./lib/hash');
 
+function replaceAll(find, replace, str) {
+  var find = find.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  return str.replace(new RegExp(find, 'g'), replace);
+}
+
 module.exports = function(grunt) {
   // Project configuration.
   grunt.initConfig({
@@ -663,6 +668,9 @@ module.exports = function(grunt) {
     imgPattern.compile(imgPattern);
     imgPatternG.compile(imgPatternG);
 
+    // img = /image/dir/img/my/path/xx.png
+    // imgMatch = /my/path/xx.png
+    // css contain: {$imgDomain}/my/path/xx.png
     function process(filepath) {
       if (grunt.file.exists(filepath) && grunt.file.isFile(filepath)) {
         var css = grunt.file.read(filepath);
@@ -672,19 +680,28 @@ module.exports = function(grunt) {
         if (imgs && imgs.length > 0) {
           grunt.log.ok('Processing: ' + filepath);
           imgs.forEach(function(img) {
+            var imgMatch = img.match(imgPattern)[1];
             // 图片文件路径
-            var imgPath = path.join(dir, 'img', img.match(imgPattern)[1]);
+            var imgPath = path.join(dir, 'img', imgMatch);
             // 去重
-            imgPaths[imgPath] = '';
+            imgPaths[imgPath] = imgMatch;
           });
 
           // hash the img
           for (var img in imgPaths) {
-            grunt.log.debug('Hashing: ' + img);
-            var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
-            img = '(' + img.replace(path.join(dir, 'img'), options.imgDomain) +
-              '?' + hash + ')';
-            css = css.replace(imgPatternG, img.replace(/\\/g, '/'));
+            if (grunt.file.exists(img)) {
+              var hash = getHash(grunt.file.read(img), 'utf8').substr(0, 8);
+              grunt.log.ok('Hashing: ' + img + ' -> ' + hash.green);
+
+              var imgMatch = imgPaths[img];
+              var imgCss = path.join('{$imgDomain}', imgMatch);
+
+              img = options.imgDomain + '/' + imgMatch.replace(/\\/g, '/') + '?' + hash;
+              css = replaceAll(imgCss, img, css).replace(/\?\{.*?\}/g, '');
+            }
+            else {
+              grunt.log.warn(img.red + ' used in ' + filepath.red + ' does not exists!');
+            }
           }
 
           grunt.file.write(filepath, css);
