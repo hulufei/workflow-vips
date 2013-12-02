@@ -239,6 +239,7 @@ module.exports = function(grunt) {
             if (err) {
               grunt.fatal(err, 1);
             }
+            ChangeLog.generate(stdout);
             cb();
           }
         }
@@ -488,7 +489,8 @@ module.exports = function(grunt) {
           // 兼容windows文件路径
           line = line.replace(cwd, '').replace(/\\/g, '/');
           var match = line.match(filePattern);
-          if (match) {
+          // 排除src目录里面的文件
+          if (match && line.indexOf('/src/') === -1) {
             grunt.log.debug('file matches: ' + match);
             filepath = match[1].replace(branch + '/', '').trim();
             json[branch] = json[branch] || {};
@@ -790,6 +792,11 @@ module.exports = function(grunt) {
   // Update all specified branches(dev/test)
   grunt.registerTask('upall', function (name) {
     var branches = preprocess('project');
+
+    // 配置changelog
+    var project = grunt.config('_project');
+    ChangeLog.project = project;
+
     branches.getAll(name).map(function (branch) {
       grunt.task.run('update:' + branch);
     });
@@ -885,6 +892,7 @@ module.exports = function(grunt) {
 
   // svn update, commit之前发现冲突
   grunt.registerTask('update', function (branch) {
+    ChangeLog.branch = branch;
     grunt.config('branch_dest', branch);
     grunt.task.run('shell:update');
   });
@@ -1227,9 +1235,9 @@ module.exports = function(grunt) {
     }
     // Map s2.vipshop.com to local
     var hosts = fs.readFileSync(hostfile, 'utf8');
-    var mapline = '127.0.0.1 s2.vipshop.com s2.vimage2.com' + grunt.util.linefeed;
+    var mapline = '127.0.0.1 s2.vipstatic.com s2.vimage2.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
-    grunt.log.writeln('Modified ' + hostfile.green + ' map s2.vipshop.com to 127.0.0.1');
+    grunt.log.writeln('Modified ' + hostfile.green + ' map s2 to 127.0.0.1');
     require('./lib/server')(dev_static);
     // block the console, sftp sync
     grunt.task.run('sync_setup', 'watch:sync');
