@@ -1,6 +1,7 @@
 {
 	"name": "project-name",
 	"description": "about project",
+	"redmine": "",
 	"branches": {
 		"remote": "https://svn.server.url/branches/",
 		"base": "branches",

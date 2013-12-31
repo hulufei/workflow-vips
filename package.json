@@ -4,7 +4,8 @@
   "description": "Automate front-end workflow for vipshop",
   "main": "Gruntfile.js",
   "dependencies": {
-    "grunt": "~0.4.1"
+    "grunt": "~0.4.1",
+    "time-grunt": "~0.2.5"
   },
   "devDependencies": {
     "grunt-contrib-uglify": "~0.1.1",

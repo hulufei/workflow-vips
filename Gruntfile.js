@@ -9,6 +9,7 @@ function replaceAll(find, replace, str) {
 }
 
 module.exports = function(grunt) {
+  // require('time-grunt')(grunt);
   // Project configuration.
   grunt.initConfig({
     // Metadata.
@@ -47,7 +48,7 @@ module.exports = function(grunt) {
       },
       isEmpty: function () {
         return !this.getAll().length;
-      },
+      }
     },
     // 保存输出信息
     _output: {
@@ -155,9 +156,7 @@ module.exports = function(grunt) {
       }
     },
     processCss: {
-      options: {
-        imgDomain: '<%= buildConfig.imgDomain %>'
-      },
+      options: '<%= buildConfig %>',
       vips: {
         expand: true,
         cwd: '<%= cssmin.vips.dest %>',
@@ -660,20 +659,25 @@ module.exports = function(grunt) {
 
   // CSS引用图片版本号更新（根据图片内容hash取8位）
   grunt.registerMultiTask('processCss', 'replace variables in CSS', function () {
-    var options =  this.options({
-      imgDomain: ''
-    });
-    var imgDomain = options.imgDomain,
-    imgPattern = /\(['"]*\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/,
-    imgPatternG = /\(['"]*\{\$imgDomain\}\/(.*?\.(jpg|png|gif)).*?\)/g;
+    var options =  this.options({ imgDomain: '' });
+    var imgPattern, imgPatternG;
+    for (var k in options) {
+      var imgDomain = options[k];
+      var pStr = '\\([\'\"]*\\{\\$' + k + '\\}\\/(.*?\\.(jpg|png|gif)).*?\\)';
+      imgPattern = new RegExp(pStr);
+      imgPatternG = new RegExp(pStr, 'g');
 
-    imgPattern.compile(imgPattern);
-    imgPatternG.compile(imgPatternG);
+      imgPattern.compile(imgPattern);
+      imgPatternG.compile(imgPatternG);
 
+      this.filesSrc.forEach(function(file) {
+        process(file, k, imgDomain);
+      });
+    }
     // img = /image/dir/img/my/path/xx.png
     // imgMatch = /my/path/xx.png
     // css contain: {$imgDomain}/my/path/xx.png
-    function process(filepath) {
+    function process(filepath, k, v) {
       if (grunt.file.exists(filepath) && grunt.file.isFile(filepath)) {
         var css = grunt.file.read(filepath);
         var dir = filepath.replace(/\\/g, '/').match(/(.*?)\/css\/.*/)[1];
@@ -696,9 +700,9 @@ module.exports = function(grunt) {
               grunt.log.ok('Hashing: ' + img + ' -> ' + hash.green);
 
               var imgMatch = imgPaths[img];
-              var imgCss = path.join('{$imgDomain}', imgMatch).replace(/\\/g, '/');
+              var imgCss = path.join('{$' + k + '}', imgMatch).replace(/\\/g, '/');
 
-              img = options.imgDomain + '/' + imgMatch + '?' + hash;
+              img = v + '/' + imgMatch + '?' + hash;
               css = replaceAll(imgCss, img, css).replace(/\?\{.*?\}/g, '');
             }
             else {
@@ -718,8 +722,6 @@ module.exports = function(grunt) {
         grunt.log.warn('Soure file ' + filepath + ' not found');
       }
     }
-
-    this.filesSrc.forEach(process);
   });
 
   // task wrapper，keep config values per task.
@@ -839,7 +841,7 @@ module.exports = function(grunt) {
   }
   // svn checkout
   grunt.registerTask('checkout', function(type, branch) {
-    var base = grunt.config('project.branches.base');
+    var base = grunt.config('project.branches.base') || '';
     if (type === 'static') {
       grunt.config('remoteUrl', grunt.config('project.svn.static.branch') + branch);
     }
@@ -1118,6 +1120,10 @@ module.exports = function(grunt) {
     }
 
     if (action === 'startcommit') {
+      var messagefile = grunt.option('messagefile');
+      var redmineMatch = branch.match(/-(\d+)/);
+      var redmine = project.redmine || (redmineMatch ? redmineMatch[1] : '');
+      grunt.file.write(messagefile, 'refs #' + redmine);
       grunt.task.run(['statuslog:dev', 'build']);
     }
     else if (action === 'postcommit') {
@@ -1150,6 +1156,7 @@ module.exports = function(grunt) {
   // set target branch
   grunt.registerTask('sync_setup', function(target) {
     var branches = preprocess('project');
+    var project = grunt.config('_project');
     // default set to first tpl branch and first static test branch
     grunt.config('target_branch_tpl',
       grunt.config('project.server.tpl.branch') || branches.dev.tpl[0]);
@@ -1235,7 +1242,7 @@ module.exports = function(grunt) {
     }
     // Map s2.vipshop.com to local
     var hosts = fs.readFileSync(hostfile, 'utf8');
-    var mapline = '127.0.0.1 s2.vipstatic.com s2.vimage2.com' + grunt.util.linefeed;
+    var mapline = '127.0.0.1 s2.vipstatic.com s2.vimage2.com s2.vipshop.com' + grunt.util.linefeed;
     fs.writeFileSync(hostfile,  mapline + hosts.replace(mapline, ''));
     grunt.log.writeln('Modified ' + hostfile.green + ' map s2 to 127.0.0.1');
     require('./lib/server')(dev_static);

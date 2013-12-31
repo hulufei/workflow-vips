@@ -7,5 +7,6 @@
 	"goodsImgVer": "1.296",
 	"mallImgVer": "1.0",
 	"cardImgVer": "1.1",
-	"imgDomain": "//s2.vipshop.com/img"
+	"imgDomain": "//s2.vipshop.com/img",
+	"otherDomain": "//s2.other.com"
 }
